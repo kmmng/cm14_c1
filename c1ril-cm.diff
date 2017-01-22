@@ -1,0 +1,343 @@
+--- SamsungExynos4RIL.orig	2017-01-18 15:00:12.931905900 +0200
++++ SamsungExynos4RIL.java	2017-01-19 22:29:54.400410800 +0200
+@@ -15,11 +15,21 @@
+  * limitations under the License.
+  */
+ 
++/*
++Custom RIL for Samsung Galaxy S3 Korean C1 models.
++Based on multiple RILs :
++https://github.com/CyanogenMod/android_device_samsung_i9300/blob/stable/cm-13.0-ZNH5Y/ril/telephony/java/com/android/internal/telephony/SamsungExynos4RIL.java
++https://github.com/FullGreen/android_device_samsung_c1skt/blob/cm-13.0/ril/telephony/java/com/android/internal/telephony/SamsungExynos4RIL.java
++https://github.com/CyanogenMod/android_device_samsung_i9500/blob/cm-13.0/ril/telephony/java/com/android/internal/telephony/ExynosXMM6360RIL.java
++And on original research
++*/
++
+ package com.android.internal.telephony;
+ 
+ import static com.android.internal.telephony.RILConstants.*;
+ 
+ import android.content.Context;
++import android.media.AudioManager;
+ import android.os.AsyncResult;
+ import android.os.Handler;
+ import android.os.Message;
+@@ -29,6 +39,11 @@ import android.telephony.ModemActivityIn
+ import android.telephony.Rlog;
+ 
+ import android.telephony.PhoneNumberUtils;
++import com.android.internal.telephony.gsm.SmsBroadcastConfigInfo;
++import com.android.internal.telephony.cdma.CdmaSmsBroadcastConfigInfo;
++import java.io.IOException;
++import java.util.ArrayList;
++import java.util.Collections;
+ 
+ public class SamsungExynos4RIL extends RIL implements CommandsInterface {
+ 
+@@ -119,8 +134,11 @@ public class SamsungExynos4RIL extends R
+     private Object mCatProCmdBuffer;
+     /* private Message mPendingGetSimStatus; */
+ 
++    private AudioManager mAudioManager;
++
+     public SamsungExynos4RIL(Context context, int networkMode, int cdmaSubscription, Integer instanceId) {
+         super(context, networkMode, cdmaSubscription, instanceId);
++        mAudioManager = (AudioManager)mContext.getSystemService(Context.AUDIO_SERVICE);
+     }
+ 
+     static String
+@@ -139,6 +157,89 @@ public class SamsungExynos4RIL extends R
+         }
+     }
+ 
++    protected Object
++    responseCallList(Parcel p) {
++        int num;
++        int voiceSettings;
++        ArrayList<DriverCall> response;
++        DriverCall dc;
++
++        num = p.readInt();
++        response = new ArrayList<DriverCall>(num);
++
++        if (RILJ_LOGV) {
++            riljLog("responseCallList: num=" + num +
++                    " mEmergencyCallbackModeRegistrant=" + mEmergencyCallbackModeRegistrant +
++                    " mTestingEmergencyCall=" + mTestingEmergencyCall.get());
++        }
++        for (int i = 0 ; i < num ; i++) {
++            dc = new DriverCall();
++
++            dc.state = DriverCall.stateFromCLCC(p.readInt());
++            dc.index = p.readInt() & 0xff;
++            dc.TOA = p.readInt();
++            dc.isMpty = (0 != p.readInt());
++            dc.isMT = (0 != p.readInt());
++            dc.als = p.readInt();
++            voiceSettings = p.readInt();
++            dc.isVoice = (0 == voiceSettings) ? false : true;
++            p.readInt();
++            p.readInt();
++            p.readInt();
++            p.readString();
++            dc.isVoicePrivacy = (0 != p.readInt());
++            dc.number = p.readString();
++            int np = p.readInt();
++            dc.numberPresentation = DriverCall.presentationFromCLIP(np);
++            p.readInt(); // Ignore dcs
++            dc.name = p.readString();
++            dc.namePresentation = p.readInt();
++            int uusInfoPresent = p.readInt();
++            if (uusInfoPresent == 1) {
++                dc.uusInfo = new UUSInfo();
++                dc.uusInfo.setType(p.readInt());
++                dc.uusInfo.setDcs(p.readInt());
++                byte[] userData = p.createByteArray();
++                dc.uusInfo.setUserData(userData);
++                riljLogv(String.format("Incoming UUS : type=%d, dcs=%d, length=%d",
++                                dc.uusInfo.getType(), dc.uusInfo.getDcs(),
++                                dc.uusInfo.getUserData().length));
++                riljLogv("Incoming UUS : data (string)="
++                        + new String(dc.uusInfo.getUserData()));
++                riljLogv("Incoming UUS : data (hex): "
++                        + IccUtils.bytesToHexString(dc.uusInfo.getUserData()));
++            } else {
++                riljLogv("Incoming UUS : NOT present!");
++            }
++
++            // Make sure there's a leading + on addresses with a TOA of 145
++            dc.number = PhoneNumberUtils.stringFromStringAndTOA(dc.number, dc.TOA);
++
++            response.add(dc);
++
++            if (dc.isVoicePrivacy) {
++                mVoicePrivacyOnRegistrants.notifyRegistrants();
++                riljLog("InCall VoicePrivacy is enabled");
++            } else {
++                mVoicePrivacyOffRegistrants.notifyRegistrants();
++                riljLog("InCall VoicePrivacy is disabled");
++            }
++        }
++
++        Collections.sort(response);
++
++        if ((num == 0) && mTestingEmergencyCall.getAndSet(false)) {
++            if (mEmergencyCallbackModeRegistrant != null) {
++                riljLog("responseCallList: call ended, testing emergency call," +
++                            " notify ECM Registrants");
++                mEmergencyCallbackModeRegistrant.notifyRegistrant();
++            }
++        }
++
++        return response;
++
++    }
++
+ 
+     @Override
+     protected RILRequest processSolicited (Parcel p) {
+@@ -415,6 +516,9 @@ public class SamsungExynos4RIL extends R
+         RILRequest rr = RILRequest.obtain(RIL_REQUEST_DIAL, result);
+         rr.mParcel.writeString(address);
+         rr.mParcel.writeInt(clirMode);
++        rr.mParcel.writeInt(0);
++        rr.mParcel.writeInt(1);
++        rr.mParcel.writeString("");
+ 
+         if (uusInfo == null) {
+             rr.mParcel.writeInt(0); // UUS information is absent
+@@ -437,6 +541,10 @@ public class SamsungExynos4RIL extends R
+         RILRequest rr = RILRequest.obtain(RIL_REQUEST_DIAL_EMERGENCY, result);
+         rr.mParcel.writeString(address + "/");
+         rr.mParcel.writeInt(clirMode);
++        rr.mParcel.writeInt(0);
++        rr.mParcel.writeInt(3);
++        rr.mParcel.writeString("");
++
+         rr.mParcel.writeInt(0);  // UUS information is absent
+ 
+         if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
+@@ -454,6 +562,25 @@ public class SamsungExynos4RIL extends R
+         try{switch(response) {
+             case RIL_UNSOL_STK_PROACTIVE_COMMAND: ret = responseString(p); break;
+             case RIL_UNSOL_STK_SEND_SMS_RESULT: ret = responseInts(p); break; // Samsung STK
++            case RIL_UNSOL_RELEASE_COMPLETE_MESSAGE: ret = responseVoid(p); break;
++            case RIL_UNSOL_AM: ret = responseString(p); break;
++            case RIL_UNSOL_WB_AMR_STATE: ret = responseInts(p); break;
++            case RIL_UNSOL_STK_CALL_CONTROL_RESULT: ret = responseVoid(p); break;
++            case RIL_UNSOL_DEVICE_READY_NOTI: ret = responseVoid(p); break;
++            case RIL_UNSOL_RESPONSE_HANDOVER: ret = responseVoid(p); break;
++            case RIL_UNSOL_IPV6_ADDR: ret = responseVoid(p); break;
++            case RIL_UNSOL_ON_USSD:
++                String[] array = null;
++                int length = p.readInt();
++                p.readInt(); // Ignore dcs
++                if (length >= 0) {
++                        array = new String[length];
++                        for (int i = 0 ; i < length ; i++) {
++                                array[i] = p.readString();
++                        }
++                }
++                ret = array;
++                break;
+             default:
+                 // Rewind the Parcel
+                 p.setDataPosition(dataPosition);
+@@ -489,10 +616,58 @@ public class SamsungExynos4RIL extends R
+                             new AsyncResult (null, ret, null));
+                 }
+             break;
++            case RIL_UNSOL_RELEASE_COMPLETE_MESSAGE:
++            break;
++            case RIL_UNSOL_AM:
++                String amString = (String) ret;
++                Rlog.d(RILJ_LOG_TAG, "Executing AM: " + amString);
++
++                try {
++                    Runtime.getRuntime().exec("am " + amString);
++                } catch (IOException e) {
++                    e.printStackTrace();
++                    Rlog.e(RILJ_LOG_TAG, "am " + amString + " could not be executed.");
++                }
++            break;
++            case RIL_UNSOL_WB_AMR_STATE:
++                setWbAmr(((int[])ret)[0]);
++            break;
++            case RIL_UNSOL_STK_CALL_CONTROL_RESULT:
++            break;
++            case RIL_UNSOL_DEVICE_READY_NOTI:
++            break;
++            case RIL_UNSOL_RESPONSE_HANDOVER:
++            break;
++            case RIL_UNSOL_IPV6_ADDR:
++            break;
++            case RIL_UNSOL_ON_USSD:
++                String[] resp = (String[])ret;
++
++                if (resp.length < 2) {
++                    resp = new String[2];
++                    resp[0] = ((String[])ret)[0];
++                    resp[1] = null;
++                }
++                if (RILJ_LOGD) unsljLogMore(response, resp[0]);
++                if (mUSSDRegistrant != null) {
++                    mUSSDRegistrant.notifyRegistrant(
++                        new AsyncResult (null, resp, null));
++                }
++            break;
+         }
+ 
+     }
+ 
++    private void setWbAmr(int state) {
++        if (state == 1) {
++            Rlog.d(RILJ_LOG_TAG, "setWbAmr(): setting audio parameter - wb_amr=on");
++            mAudioManager.setParameters("wide_voice_enable=true");
++        }else if (state == 0) {
++            Rlog.d(RILJ_LOG_TAG, "setWbAmr(): setting audio parameter - wb_amr=off");
++            mAudioManager.setParameters("wide_voice_enable=false");
++        }
++    }
++
+     @Override
+     public void setOnCatProactiveCmd(Handler h, int what, Object obj) {
+         mCatProCmdRegistrant = new Registrant (h, what, obj);
+@@ -505,9 +680,11 @@ public class SamsungExynos4RIL extends R
+ 
+     private void
+     constructGsmSendSmsRilRequest (RILRequest rr, String smscPDU, String pdu) {
+-        rr.mParcel.writeInt(2);
++        rr.mParcel.writeInt(4);
+         rr.mParcel.writeString(smscPDU);
+         rr.mParcel.writeString(pdu);
++        rr.mParcel.writeString(Integer.toString(0));
++        rr.mParcel.writeString(Integer.toString(1));
+     }
+ 
+     /**
+@@ -527,4 +704,85 @@ public class SamsungExynos4RIL extends R
+         send(rr);
+     }
+ 
++    @Override
++    public void
++    acceptCall (Message result) {
++        RILRequest rr
++        = RILRequest.obtain(RIL_REQUEST_ANSWER, result);
++        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
++        rr.mParcel.writeInt(1);
++        rr.mParcel.writeInt(0);
++        send(rr);
++    }
++
++    @Override
++    public void getRadioCapability(Message response) {
++
++        if (response != null) {
++            Object ret = makeStaticRadioCapability();
++            AsyncResult.forMessage(response, ret, null);
++            response.sendToTarget();
++        }
++    }
++
++    @Override
++    public void getGsmBroadcastConfig(Message response) {
++
++        if (response != null) {
++            CommandException e = new CommandException(CommandException.Error.REQUEST_NOT_SUPPORTED);
++            AsyncResult.forMessage(response, null, e);
++            response.sendToTarget();
++        }
++    }
++
++    @Override
++    public void setGsmBroadcastConfig(SmsBroadcastConfigInfo[] config, Message response) {
++
++        if (response != null) {
++            CommandException e = new CommandException(CommandException.Error.REQUEST_NOT_SUPPORTED);
++            AsyncResult.forMessage(response, null, e);
++            response.sendToTarget();
++        }
++    }
++
++    @Override
++    public void setGsmBroadcastActivation(boolean activate, Message response) {
++
++        if (response != null) {
++            CommandException e = new CommandException(CommandException.Error.REQUEST_NOT_SUPPORTED);
++            AsyncResult.forMessage(response, null, e);
++            response.sendToTarget();
++        }
++    }
++
++    @Override
++    public void getCdmaBroadcastConfig(Message response) {
++
++        if (response != null) {
++            CommandException e = new CommandException(CommandException.Error.REQUEST_NOT_SUPPORTED);
++            AsyncResult.forMessage(response, null, e);
++            response.sendToTarget();
++        }
++    }
++
++    @Override
++    public void setCdmaBroadcastConfig(CdmaSmsBroadcastConfigInfo[] configs, Message response) {
++
++        if (response != null) {
++            CommandException e = new CommandException(CommandException.Error.REQUEST_NOT_SUPPORTED);
++            AsyncResult.forMessage(response, null, e);
++            response.sendToTarget();
++        }
++    }
++
++    @Override
++    public void setCdmaBroadcastActivation(boolean activate, Message response) {
++
++        if (response != null) {
++            CommandException e = new CommandException(CommandException.Error.REQUEST_NOT_SUPPORTED);
++            AsyncResult.forMessage(response, null, e);
++            response.sendToTarget();
++        }
++    }
++
+ }
