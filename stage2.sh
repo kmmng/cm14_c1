@@ -1,7 +1,11 @@
 #!/bin/bash
 echo Stage 2 - prepare source for build and patch it for c1
 SDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+#if grep -q Microsoft /proc/version; then
+#BDIR=/mnt/e/wsl/cm14
+#else
 BDIR=~/android/cm14
+#fi
 if [ ! "$C1MODEL" ]; then
 C1MODEL=c1lgt
 fi
@@ -17,7 +21,6 @@ exit
 fi
 echo Configuring source for SHV-E210$C1VAR...
 echo Errors may appear in the first part of the configuration, please ignore them.
-sleep 5
 export PATH="$HOME/bin:$PATH"
 cd $BDIR
 source build/envsetup.sh
@@ -54,7 +57,7 @@ sed -i "s/\/dev\/cdma_rfs0                          u:object_r:radio_device:s0/\
 fi
 sed -i "s@export LD_SHIM_LIBS /system/lib/libsec-ril@export LD_SHIM_LIBS /system/lib/libril@" rootdir/init.target.rc
 sed -i "s/    write \/data\/.cid.info 0/    write \/data\/.cid.info murata\n    chown wifi system \/data\/.cid.info\n    chmod 0660 \/data\/.cid.info/" rootdir/init.target.rc
-sed -i "s/service cpboot-daemon \/sbin\/cbd -d/service cbd-lte \/sbin\/cbd -d -t cmc221 -b d -m d/" rootdir/init.target.rc
+sed -i "s/service cpboot-daemon \/system\/bin\/cbd -d/service cbd-lte \/system\/bin\/cbd -d -t cmc221 -b d -m d/" rootdir/init.target.rc
 sed -i "s/i9300/$C1MODEL/g" selinux/file_contexts
 sed -i "s/i9300/$C1MODEL/g" Android.mk
 sed -i "s/xmm6262/cmc221/" BoardConfig.mk
@@ -63,7 +66,7 @@ sed -i "s/GT-I9300/SHV-E210$C1VAR/g" BoardConfig.mk
 # Enlarge system partition
 sed -i 's/# assert/# system partition size\nBOARD_SYSTEMIMAGE_PARTITION_SIZE := 2147483648\n\n# assert/' BoardConfig.mk
 # Definition for rild patch
-sed -i "s/COMMON_GLOBAL_CFLAGS += -DDISABLE_ASHMEM_TRACKING/COMMON_GLOBAL_CFLAGS += -DDISABLE_ASHMEM_TRACKING -DRIL_PRE_M_BLOBS/" BoardConfig.mk
+sed -i "s/-DDISABLE_ASHMEM_TRACKING/-DDISABLE_ASHMEM_TRACKING -DRIL_PRE_M_BLOBS/" BoardConfig.mk
 sed -i "s/i9300/$C1MODEL/g" lineage.mk
 sed -i "s/GT-I9300/SHV-E210$C1VAR/g" lineage.mk
 sed -i "s/I9300/E210$C1VAR/g" lineage.mk
@@ -95,10 +98,13 @@ sed -i "s/i9300/$C1MODEL/g" $C1MODEL.mk
 sed -i "s/m0/$C1MODEL/g" $C1MODEL.mk
 # Patch RILJ
 patch --no-backup-if-mismatch -t -r - ril/telephony/java/com/android/internal/telephony/SamsungExynos4RIL.java < $SDIR/c1ril-cm.diff
+sed -i 's/import java.io.IOException;/import com.android.internal.telephony.uicc.IccUtils;\nimport java.io.IOException;/' ril/telephony/java/com/android/internal/telephony/SamsungExynos4RIL.java
 # Add more proprietary files
 #echo bin/rild>>proprietary-files.txt
+echo lib/libomission_avoidance.so>>proprietary-files.txt
 echo lib/libril.so>>proprietary-files.txt
-echo lib/libsecril-client.so>>proprietary-files.txt
+echo lib/libfactoryutil.so>>proprietary-files.txt
+#echo lib/libsecril-client.so>>proprietary-files.txt
 echo lib/hw/sensors.smdk4x12.so>>proprietary-files.txt
 sed -i "s/i9300/$C1MODEL/g" system.prop
 # Patch config files to support LTE
@@ -108,12 +114,12 @@ echo \<?xml version=\"1.0\" encoding=\"utf-8\"?\>>overlay/packages/services/Tele
 echo \<resources\>>>overlay/packages/services/Telephony/res/values/config.xml
 echo \<bool name=\"config_enabled_lte\" translatable=\"false\"\>true\</bool\>>>overlay/packages/services/Telephony/res/values/config.xml
 echo \</resources\>>>overlay/packages/services/Telephony/res/values/config.xml
-# Make SamsungServiceMode work with the new RIL
-mkdir -p overlay/packages/apps/SamsungServiceMode/res/values/
-echo \<?xml version=\"1.0\" encoding=\"utf-8\"?\>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
-echo \<resources\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
-echo \<integer name=\"config_api_version\"\>2\</integer\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
-echo \</resources\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
+## Make SamsungServiceMode work with the new RIL
+#mkdir -p overlay/packages/apps/SamsungServiceMode/res/values/
+#echo \<?xml version=\"1.0\" encoding=\"utf-8\"?\>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
+#echo \<resources\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
+#echo \<integer name=\"config_api_version\"\>2\</integer\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
+#echo \</resources\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
 # Patch smdk4412 common files
 cd ../smdk4412-common
 git checkout -f
@@ -126,6 +132,7 @@ sed -i "s/i9300 i9305/i9300 c1lgt c1skt c1ktt i9305/g" camera/Android.mk
 echo vendor/firmware/SlimISP_BK.bin>>proprietary-files.txt
 echo vendor/firmware/SlimISP_GJ.bin>>proprietary-files.txt
 echo vendor/firmware/SlimISP_GM.bin>>proprietary-files.txt
+echo vendor/firmware/SlimISP_PH.bin>>proprietary-files.txt
 cd ../$C1MODEL
 # Now we can copy proprietary files to vendor directory
 . ./extract-files.sh $SDIR/blobs/
@@ -142,9 +149,11 @@ sed -i 's/extern void RIL_register_socket (RIL_RadioFunctions \*(\*rilUimInit)/#
 sed -i 's/        (const struct RIL_Env \*, int, char \*\*), RIL_SOCKET_TYPE socketType, int argc, char \*\*argv);/        (const struct RIL_Env *, int, char **), RIL_SOCKET_TYPE socketType, int argc, char **argv);\n#endif/' rild/rild.c
 sed -i 's/    if (rilUimInit) {/#ifndef RIL_PRE_M_BLOBS\n    if (rilUimInit) {/' rild/rild.c
 sed -i 's/    RLOGD("RIL_register_socket completed");/    RLOGD("RIL_register_socket completed");\n#endif/' rild/rild.c
+sed -i 's/extern void RIL_onRequestAck(RIL_Token t);/#ifndef RIL_PRE_M_BLOBS\nextern void RIL_onRequestAck(RIL_Token t);\n#endif/' rild/rild.c
+sed -i 's/    RIL_onRequestAck/#ifndef RIL_PRE_M_BLOBS\n    RIL_onRequestAck\n#else\n    NULL\n#endif/' rild/rild.c
 croot
 # Patch rild.rc for c1
-echo "	onrestart restart cbd-lte" >> hardware/ril/rild/rild.rc
+echo "    onrestart restart cbd-lte" >> hardware/ril/rild/rild.rc
 # Patch samsung kernel for c1
 cd kernel/samsung/smdk4412
 git checkout -f
@@ -204,6 +213,17 @@ echo CONFIG_TDMB=y>>lineageos_${C1MODEL}_defconfig
 echo CONFIG_TDMB_VENDOR_RAONTECH=y>>lineageos_${C1MODEL}_defconfig
 echo CONFIG_TDMB_MTV318=y>>lineageos_${C1MODEL}_defconfig
 echo CONFIG_TDMB_SPI=y>>lineageos_${C1MODEL}_defconfig
+#sed -i 's/# CONFIG_MODULES is not set//' lineageos_${C1MODEL}_defconfig
+#echo CONFIG_MODULES=y>>lineageos_${C1MODEL}_defconfig
+#sed -i 's/# CONFIG_MODULE_FORCE_LOAD is not set//' lineageos_${C1MODEL}_defconfig
+#echo CONFIG_MODULE_FORCE_LOAD=y>>lineageos_${C1MODEL}_defconfig
+#sed -i 's/# CONFIG_MODULE_UNLOAD is not set//' lineageos_${C1MODEL}_defconfig
+#echo CONFIG_MODULE_UNLOAD=y>>lineageos_${C1MODEL}_defconfig
+#sed -i 's/# CONFIG_MODULE_FORCE_UNLOAD is not set//' lineageos_${C1MODEL}_defconfig
+#echo CONFIG_MODULE_FORCE_UNLOAD=y>>lineageos_${C1MODEL}_defconfig
+#sed -i 's/# CONFIG_MODVERSIONS is not set//' lineageos_${C1MODEL}_defconfig
+#echo CONFIG_MODVERSIONS=y>>lineageos_${C1MODEL}_defconfig
+#sed -i 's/CONFIG_BCM4334=y/CONFIG_BCM4334=m/' lineageos_${C1MODEL}_defconfig
 # We need this one only if we want to reuse the kernel in TWRP
 sed -i 's/# CONFIG_RD_LZMA is not set//' lineageos_${C1MODEL}_defconfig
 echo CONFIG_RD_LZMA=y>>lineageos_${C1MODEL}_defconfig

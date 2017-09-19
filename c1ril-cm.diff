@@ -50,10 +50,10 @@
          }
      }
  
++
 +    protected Object
 +    responseCallList(Parcel p) {
 +        int num;
-+        int voiceSettings;
 +        ArrayList<DriverCall> response;
 +        DriverCall dc;
 +
@@ -69,17 +69,13 @@
 +            dc = new DriverCall();
 +
 +            dc.state = DriverCall.stateFromCLCC(p.readInt());
-+            dc.index = p.readInt() & 0xff;
++            dc.index = p.readInt();
 +            dc.TOA = p.readInt();
 +            dc.isMpty = (0 != p.readInt());
 +            dc.isMT = (0 != p.readInt());
 +            dc.als = p.readInt();
-+            voiceSettings = p.readInt();
-+            dc.isVoice = (0 == voiceSettings) ? false : true;
-+            p.readInt();
-+            p.readInt();
-+            p.readInt();
-+            p.readString();
++            dc.isVoice = p.readInt() != 0;
++            p.readInt(); //ignore isVideo
 +            dc.isVoicePrivacy = (0 != p.readInt());
 +            dc.number = p.readString();
 +            int np = p.readInt();
@@ -107,6 +103,9 @@
 +
 +            // Make sure there's a leading + on addresses with a TOA of 145
 +            dc.number = PhoneNumberUtils.stringFromStringAndTOA(dc.number, dc.TOA);
++            p.readInt(); //ignore numberpluseTOA
++            p.readString(); //ignore numberpluse
++            p.readInt(); //ignore numberplusePresentation
 +
 +            response.add(dc);
 +
@@ -133,6 +132,7 @@
 +
 +    }
 +
++
  
      @Override
      protected RILRequest processSolicited (Parcel p) {
@@ -140,9 +140,9 @@
          RILRequest rr = RILRequest.obtain(RIL_REQUEST_DIAL, result);
          rr.mParcel.writeString(address);
          rr.mParcel.writeInt(clirMode);
-+        rr.mParcel.writeInt(0);
-+        rr.mParcel.writeInt(1);
-+        rr.mParcel.writeString("");
++
++
++
  
          if (uusInfo == null) {
              rr.mParcel.writeInt(0); // UUS information is absent
@@ -150,9 +150,9 @@
          RILRequest rr = RILRequest.obtain(RIL_REQUEST_DIAL_EMERGENCY, result);
          rr.mParcel.writeString(address + "/");
          rr.mParcel.writeInt(clirMode);
-+        rr.mParcel.writeInt(0);
-+        rr.mParcel.writeInt(3);
-+        rr.mParcel.writeString("");
++
++
++
 +
          rr.mParcel.writeInt(0);  // UUS information is absent
  
@@ -247,11 +247,11 @@
      private void
      constructGsmSendSmsRilRequest (RILRequest rr, String smscPDU, String pdu) {
 -        rr.mParcel.writeInt(2);
-+        rr.mParcel.writeInt(4);
++        rr.mParcel.writeInt(2);
          rr.mParcel.writeString(smscPDU);
          rr.mParcel.writeString(pdu);
-+        rr.mParcel.writeString(Integer.toString(0));
-+        rr.mParcel.writeString(Integer.toString(1));
++
++
      }
  
      /**
@@ -265,8 +265,8 @@
 +        RILRequest rr
 +        = RILRequest.obtain(RIL_REQUEST_ANSWER, result);
 +        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
-+        rr.mParcel.writeInt(1);
-+        rr.mParcel.writeInt(0);
++
++
 +        send(rr);
 +    }
 +
