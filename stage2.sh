@@ -1,11 +1,7 @@
 #!/bin/bash
 echo Stage 2 - prepare source for build and patch it for c1
 SDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-#if grep -q Microsoft /proc/version; then
-#BDIR=/mnt/e/wsl/cm14
-#else
-BDIR=~/cm14
-#fi
+eval BDIR=`cat $SDIR/builddir`
 if [ ! "$C1MODEL" ]; then
 C1MODEL=c1lgt
 fi
@@ -24,11 +20,13 @@ echo Errors may appear in the first part of the configuration, please ignore the
 export PATH="$HOME/bin:$PATH"
 cd $BDIR
 source build/envsetup.sh
+# Cleanup
 rm -rf vendor/samsung/i9300
 rm -rf vendor/samsung/$C1MODEL
 rm -rf vendor/samsung/smdk4412-common
 # Init i9300 source. This will produce some errors but this is normal and we should continue.
 breakfast i9300
+echo No more errors should appear below this message.
 # Start converting i9300 sources to c1
 cd device/samsung
 rm -rf $C1MODEL
@@ -48,12 +46,13 @@ sed -i "/<device name=\"sco-out\">/ { N; /    <path name=\"on\">/ s/    <path na
 sed -i "/    <path name=\"off\">/ { N; /        <ctl name=\"AIF2DAC2L Mixer AIF1.1 Switch\" val=\"0\"\/>/ s/    <path name=\"off\">/    <path name=\"off\">\n        <ctl name=\"FM Control\" val=\"4\"\/>/}" configs/tiny_hw.xml
 sed -i -e "s/mmcblk0p12/mmcblk0p13/" -e "s/mmcblk0p11/mmcblk0p12/" -e "s/mmcblk0p10/mmcblk0p11/" -e "s/mmcblk0p9/mmcblk0p10/" -e "s/mmcblk0p8/mmcblk0p9/" rootdir/fstab.smdk4x12
 sed -i -e "s/mmcblk0p12/mmcblk0p13/" -e "s/mmcblk0p11/mmcblk0p12/" -e "s/mmcblk0p10/mmcblk0p11/" -e "s/mmcblk0p9 /mmcblk0p10/"  -e "s/mmcblk0p8/mmcblk0p9/" selinux/file_contexts
-sed -i "s/\/dev\/umts_boot0                         u:object_r:radio_device:s0/\/dev\/umts_boot0                         u:object_r:radio_device:s0\n\/dev\/cdma_boot0                         u:object_r:radio_device:s0/" selinux/file_contexts
-sed -i "s/\/dev\/umts_boot1                         u:object_r:radio_device:s0/\/dev\/umts_boot1                         u:object_r:radio_device:s0\n\/dev\/cdma_boot1                         u:object_r:radio_device:s0/" selinux/file_contexts
-sed -i "s/\/dev\/umts_ipc0                          u:object_r:radio_device:s0/\/dev\/umts_ipc0                          u:object_r:radio_device:s0\n\/dev\/cdma_ipc0                          u:object_r:radio_device:s0/" selinux/file_contexts
-sed -i "s/\/dev\/umts_ramdump0                      u:object_r:radio_device:s0/\/dev\/umts_ramdump0                      u:object_r:radio_device:s0\n\/dev\/cdma_ramdump0                      u:object_r:radio_device:s0/" selinux/file_contexts
-sed -i "s/\/dev\/umts_rfs0                          u:object_r:radio_device:s0/\/dev\/umts_rfs0                          u:object_r:radio_device:s0\n\/dev\/cdma_rfs0                          u:object_r:radio_device:s0/" selinux/file_contexts
-sed -i "s/\/dev\/cdma_rfs0                          u:object_r:radio_device:s0/\/dev\/cdma_rfs0                          u:object_r:radio_device:s0\n\/dev\/cdma_multipdp                      u:object_r:radio_device:s0/" selinux/file_contexts
+# Only if we use CDMA modem
+#sed -i "s/\/dev\/umts_boot0                         u:object_r:radio_device:s0/\/dev\/umts_boot0                         u:object_r:radio_device:s0\n\/dev\/cdma_boot0                         u:object_r:radio_device:s0/" selinux/file_contexts
+#sed -i "s/\/dev\/umts_boot1                         u:object_r:radio_device:s0/\/dev\/umts_boot1                         u:object_r:radio_device:s0\n\/dev\/cdma_boot1                         u:object_r:radio_device:s0/" selinux/file_contexts
+#sed -i "s/\/dev\/umts_ipc0                          u:object_r:radio_device:s0/\/dev\/umts_ipc0                          u:object_r:radio_device:s0\n\/dev\/cdma_ipc0                          u:object_r:radio_device:s0/" selinux/file_contexts
+#sed -i "s/\/dev\/umts_ramdump0                      u:object_r:radio_device:s0/\/dev\/umts_ramdump0                      u:object_r:radio_device:s0\n\/dev\/cdma_ramdump0                      u:object_r:radio_device:s0/" selinux/file_contexts
+#sed -i "s/\/dev\/umts_rfs0                          u:object_r:radio_device:s0/\/dev\/umts_rfs0                          u:object_r:radio_device:s0\n\/dev\/cdma_rfs0                          u:object_r:radio_device:s0/" selinux/file_contexts
+#sed -i "s/\/dev\/cdma_rfs0                          u:object_r:radio_device:s0/\/dev\/cdma_rfs0                          u:object_r:radio_device:s0\n\/dev\/cdma_multipdp                      u:object_r:radio_device:s0/" selinux/file_contexts
 fi
 sed -i "s@export LD_SHIM_LIBS /system/lib/libsec-ril@export LD_SHIM_LIBS /system/lib/libril@" rootdir/init.target.rc
 sed -i "s/    write \/data\/.cid.info 0/    write \/data\/.cid.info murata\n    chown wifi system \/data\/.cid.info\n    chmod 0660 \/data\/.cid.info/" rootdir/init.target.rc
@@ -83,10 +82,11 @@ fi
 sed -i "s/m0xx/$C1MODEL/" lineage.mk
 sed -i "s/m0/$C1MODEL/" lineage.mk
 # Add settings to build.prop
-echo ro.ril.telephony.mqanelements=6>>system.prop
+echo ro.tvout.enable=true>>system.prop
 echo persist.radio.add_power_save=1>>system.prop
 echo persist.radio.snapshot_enabled=1>>system.prop
 echo persist.radio.snapshot_timer=22>>system.prop
+echo ro.ril.telephony.mqanelements=6>>system.prop
 #echo telephony.lteOnGsmDevice=1>>system.prop
 #echo telephony.lteOnCdmaDevice=0>>system.prop
 #echo persist.radio.use_se_table_only=1>>system.prop
@@ -98,14 +98,12 @@ sed -i "s/i9300/$C1MODEL/g" $C1MODEL.mk
 sed -i "s/m0/$C1MODEL/g" $C1MODEL.mk
 # Patch RILJ
 patch --no-backup-if-mismatch -t -r - ril/telephony/java/com/android/internal/telephony/SamsungExynos4RIL.java < $SDIR/c1ril-cm.diff
-sed -i 's/import java.io.IOException;/import com.android.internal.telephony.uicc.IccUtils;\nimport java.io.IOException;/' ril/telephony/java/com/android/internal/telephony/SamsungExynos4RIL.java
 # Add more proprietary files
-#echo bin/rild>>proprietary-files.txt
 echo lib/libomission_avoidance.so>>proprietary-files.txt
 echo lib/libril.so>>proprietary-files.txt
 echo lib/libfactoryutil.so>>proprietary-files.txt
-#echo lib/libsecril-client.so>>proprietary-files.txt
 echo lib/hw/sensors.smdk4x12.so>>proprietary-files.txt
+#echo lib/libsecril-client.so>>proprietary-files.txt # Only for libsec-ril from 4.4.4
 sed -i "s/i9300/$C1MODEL/g" system.prop
 # Patch config files to support LTE
 sed -i 's/>GPRS|EDGE|WCDMA</>GSM|WCDMA|LTE</' overlay/frameworks/base/core/res/res/values/config.xml
@@ -114,17 +112,17 @@ echo \<?xml version=\"1.0\" encoding=\"utf-8\"?\>>overlay/packages/services/Tele
 echo \<resources\>>>overlay/packages/services/Telephony/res/values/config.xml
 echo \<bool name=\"config_enabled_lte\" translatable=\"false\"\>true\</bool\>>>overlay/packages/services/Telephony/res/values/config.xml
 echo \</resources\>>>overlay/packages/services/Telephony/res/values/config.xml
-## Make SamsungServiceMode work with the new RIL
-#mkdir -p overlay/packages/apps/SamsungServiceMode/res/values/
-#echo \<?xml version=\"1.0\" encoding=\"utf-8\"?\>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
-#echo \<resources\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
-#echo \<integer name=\"config_api_version\"\>2\</integer\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
-#echo \</resources\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
+# For new libsec-ril, make SamsungServiceMode work with it
+mkdir -p overlay/packages/apps/SamsungServiceMode/res/values/
+echo \<?xml version=\"1.0\" encoding=\"utf-8\"?\>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
+echo \<resources\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
+echo \<integer name=\"config_api_version\"\>2\</integer\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
+echo \</resources\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
 # Patch smdk4412 common files
 cd ../smdk4412-common
 git checkout -f
-# TODO Make this change only for c1
-sed -i 's/phone-xhdpi-1024-dalvik-heap/phone-xhdpi-2048-dalvik-heap/' common.mk
+sed -i 's@$(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)@ifneq ($(filter c1lgt c1skt c1ktt, $(PRODUCT_RELEASE_NAME)),)\n$(call inherit-product, frameworks/native/build/phone-xhdpi-2048-dalvik-heap.mk)\nM-O-R-E@' common.mk
+sed -i 's@M-O-R-E@else\n$(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)\nendif@' common.mk
 sed -i "s/i9300 i9305/i9300 c1lgt c1skt c1ktt i9305/g" Android.mk
 sed -i "s/i9300 i9305/i9300 c1lgt c1skt c1ktt i9305/g" extract-files.sh
 sed -i "s/i9300 i9305/i9300 c1lgt c1skt c1ktt i9305/g" camera/Android.mk
@@ -157,13 +155,7 @@ echo "    onrestart restart cbd-lte" >> hardware/ril/rild/rild.rc
 # Patch samsung kernel for c1
 cd kernel/samsung/smdk4412
 git checkout -f
-if grep -q Microsoft /proc/version; then
-# Workaround for strange WSL bug
-cd include
-rm asm
-ln -s asm-generic asm
-cd ..
-fi
+# Update modem drivers from Samsung sources
 rm -rf drivers/misc/modem_if_c1
 rm -rf include/linux/platform_data/modem_c1.h
 patch --no-backup-if-mismatch -t -r - -p1 < $SDIR/c1kernel-cm.diff
@@ -175,92 +167,81 @@ sed -i 's/	sromc_config_access_timing(bnk_cfg->csn, tm_cfg);/@ @ @ @/' arch/arm/
 sed -i '1,/@ @ @ @/s/@ @ @ @/	sromc_config_access_timing(bnk_cfg->csn, tm_cfg);/' arch/arm/mach-exynos/board-c1lgt-modems.c
 sed -i '1,/@ @ @ @/s/@ @ @ @/	sromc_config_access_timing(bnk_cfg->csn, tm_cfg);\n#endif/' arch/arm/mach-exynos/board-c1lgt-modems.c
 sed -i 's/	platform_device_register(\&cdma_modem);/#if !defined(CONFIG_C1_LGT_EXPERIMENTAL)\n	platform_device_register(\&cdma_modem);\n#endif/' arch/arm/mach-exynos/board-c1lgt-modems.c
-# Update camera kernel driver from Samsung source, this seems to make camera app glitches less severe
+# Update camera kernel driver from Samsung sources, this should make camera app glitches less severe
 cp $SDIR/camera/s5c73m3.c drivers/media/video/
 cp $SDIR/camera/s5c73m3.h drivers/media/video/
 cp $SDIR/camera/s5c73m3_spi.c drivers/media/video/
 cp $SDIR/camera/s5c73m3_platform.h include/media/
 cp $SDIR/camera/midas-camera.c arch/arm/mach-exynos/
-# sed -i 's@clk_set_rate(sclk, 100 \* 1000 \* 1000); /\*50MHz\*/@clk_set_rate(sclk, 50 * 1000 * 1000); /*25MHz*/@' arch/arm/mach-exynos/mach-midas.c
 cd arch/arm/configs
+KCFG=lineageos_${C1MODEL}_defconfig
 # Kernel config for all c1 models
-cp lineageos_i9300_defconfig lineageos_${C1MODEL}_defconfig
-sed -i 's/CONFIG_TARGET_LOCALE_EUR=y//' lineageos_${C1MODEL}_defconfig
-sed -i 's/# CONFIG_TARGET_LOCALE_KOR is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_TARGET_LOCALE_KOR=y>>lineageos_${C1MODEL}_defconfig
-sed -i 's/CONFIG_MACH_M0=y//' lineageos_${C1MODEL}_defconfig
-sed -i 's/# CONFIG_MACH_C1 is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_MACH_C1=y>>lineageos_${C1MODEL}_defconfig
-sed -i 's/CONFIG_WLAN_REGION_CODE=100//' lineageos_${C1MODEL}_defconfig
-sed -i 's/CONFIG_SEC_MODEM_M0=y//' lineageos_${C1MODEL}_defconfig
-sed -i 's/# CONFIG_LTE_MODEM_CMC221 is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_LTE_MODEM_CMC221=y>>lineageos_${C1MODEL}_defconfig
-sed -i 's/# CONFIG_LINK_DEVICE_DPRAM is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_LINK_DEVICE_DPRAM=y>>lineageos_${C1MODEL}_defconfig
-sed -i 's/# CONFIG_LINK_DEVICE_USB is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_LINK_DEVICE_USB=y>>lineageos_${C1MODEL}_defconfig
-sed -i 's/# CONFIG_USBHUB_USB3503 is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_USBHUB_USB3503=y>>lineageos_${C1MODEL}_defconfig
-sed -i 's/CONFIG_UMTS_MODEM_XMM6262=y//' lineageos_${C1MODEL}_defconfig
-sed -i 's/CONFIG_LINK_DEVICE_HSIC=y//' lineageos_${C1MODEL}_defconfig
-sed -i 's/# CONFIG_SIPC_VER_5 is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_SIPC_VER_5=y>>lineageos_${C1MODEL}_defconfig
-sed -i 's/CONFIG_SND_DEBUG=y//' lineageos_${C1MODEL}_defconfig
-sed -i 's/CONFIG_FM_RADIO=y//' lineageos_${C1MODEL}_defconfig
-sed -i 's/CONFIG_FM_SI4705=y//' lineageos_${C1MODEL}_defconfig
-sed -i 's/# CONFIG_TDMB is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_TDMB=y>>lineageos_${C1MODEL}_defconfig
-echo CONFIG_TDMB_VENDOR_RAONTECH=y>>lineageos_${C1MODEL}_defconfig
-echo CONFIG_TDMB_MTV318=y>>lineageos_${C1MODEL}_defconfig
-echo CONFIG_TDMB_SPI=y>>lineageos_${C1MODEL}_defconfig
-#sed -i 's/# CONFIG_MODULES is not set//' lineageos_${C1MODEL}_defconfig
-#echo CONFIG_MODULES=y>>lineageos_${C1MODEL}_defconfig
-#sed -i 's/# CONFIG_MODULE_FORCE_LOAD is not set//' lineageos_${C1MODEL}_defconfig
-#echo CONFIG_MODULE_FORCE_LOAD=y>>lineageos_${C1MODEL}_defconfig
-#sed -i 's/# CONFIG_MODULE_UNLOAD is not set//' lineageos_${C1MODEL}_defconfig
-#echo CONFIG_MODULE_UNLOAD=y>>lineageos_${C1MODEL}_defconfig
-#sed -i 's/# CONFIG_MODULE_FORCE_UNLOAD is not set//' lineageos_${C1MODEL}_defconfig
-#echo CONFIG_MODULE_FORCE_UNLOAD=y>>lineageos_${C1MODEL}_defconfig
-#sed -i 's/# CONFIG_MODVERSIONS is not set//' lineageos_${C1MODEL}_defconfig
-#echo CONFIG_MODVERSIONS=y>>lineageos_${C1MODEL}_defconfig
-#sed -i 's/CONFIG_BCM4334=y/CONFIG_BCM4334=m/' lineageos_${C1MODEL}_defconfig
+cp lineageos_i9300_defconfig $KCFG
+sed -i 's/CONFIG_TARGET_LOCALE_EUR=y//' $KCFG
+sed -i 's/# CONFIG_TARGET_LOCALE_KOR is not set//' $KCFG
+echo CONFIG_TARGET_LOCALE_KOR=y>>$KCFG
+sed -i 's/CONFIG_MACH_M0=y//' $KCFG
+sed -i 's/# CONFIG_MACH_C1 is not set//' $KCFG
+echo CONFIG_MACH_C1=y>>$KCFG
+sed -i 's/CONFIG_WLAN_REGION_CODE=100//' $KCFG
+sed -i 's/CONFIG_SEC_MODEM_M0=y//' $KCFG
+sed -i 's/# CONFIG_LTE_MODEM_CMC221 is not set//' $KCFG
+echo CONFIG_LTE_MODEM_CMC221=y>>$KCFG
+sed -i 's/# CONFIG_LINK_DEVICE_DPRAM is not set//' $KCFG
+echo CONFIG_LINK_DEVICE_DPRAM=y>>$KCFG
+sed -i 's/# CONFIG_LINK_DEVICE_USB is not set//' $KCFG
+echo CONFIG_LINK_DEVICE_USB=y>>$KCFG
+sed -i 's/# CONFIG_USBHUB_USB3503 is not set//' $KCFG
+echo CONFIG_USBHUB_USB3503=y>>$KCFG
+sed -i 's/CONFIG_UMTS_MODEM_XMM6262=y//' $KCFG
+sed -i 's/CONFIG_LINK_DEVICE_HSIC=y//' $KCFG
+sed -i 's/# CONFIG_SIPC_VER_5 is not set//' $KCFG
+echo CONFIG_SIPC_VER_5=y>>$KCFG
+sed -i 's/CONFIG_SND_DEBUG=y//' $KCFG
+sed -i 's/CONFIG_FM_RADIO=y//' $KCFG
+sed -i 's/CONFIG_FM_SI4705=y//' $KCFG
+sed -i 's/# CONFIG_TDMB is not set//' $KCFG
+echo CONFIG_TDMB=y>>$KCFG
+echo CONFIG_TDMB_VENDOR_RAONTECH=y>>$KCFG
+echo CONFIG_TDMB_MTV318=y>>$KCFG
+echo CONFIG_TDMB_SPI=y>>$KCFG
 # We need this one only if we want to reuse the kernel in TWRP
-sed -i 's/# CONFIG_RD_LZMA is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_RD_LZMA=y>>lineageos_${C1MODEL}_defconfig
+sed -i 's/# CONFIG_RD_LZMA is not set//' $KCFG
+echo CONFIG_RD_LZMA=y>>$KCFG
 # Fix video playback error, thanks to FullGreen
-sed -i 's/CONFIG_DMA_CMA=y//' lineageos_${C1MODEL}_defconfig
-sed -i '/CONFIG_CMA_SIZE_MBYTES/d' lineageos_${C1MODEL}_defconfig
-sed -i '/CONFIG_CMA_SIZE_SEL_MBYTES/d' lineageos_${C1MODEL}_defconfig
-sed -i '/CONFIG_CMA_ALIGNMENT/d' lineageos_${C1MODEL}_defconfig
-sed -i '/CONFIG_CMA_AREAS/d' lineageos_${C1MODEL}_defconfig
-sed -i 's/CONFIG_USE_FIMC_CMA=y//' lineageos_${C1MODEL}_defconfig
-sed -i 's/CONFIG_USE_MFC_CMA=y//' lineageos_${C1MODEL}_defconfig
+sed -i 's/CONFIG_DMA_CMA=y//' $KCFG
+sed -i '/CONFIG_CMA_SIZE_MBYTES/d' $KCFG
+sed -i '/CONFIG_CMA_SIZE_SEL_MBYTES/d' $KCFG
+sed -i '/CONFIG_CMA_ALIGNMENT/d' $KCFG
+sed -i '/CONFIG_CMA_AREAS/d' $KCFG
+sed -i 's/CONFIG_USE_FIMC_CMA=y//' $KCFG
+sed -i 's/CONFIG_USE_MFC_CMA=y//' $KCFG
 # Model-specific kernel config
 if [ "$C1MODEL" = "c1lgt" ]; then
-echo CONFIG_MACH_C1_KOR_LGT=y>>lineageos_${C1MODEL}_defconfig
-echo CONFIG_C1_LGT_EXPERIMENTAL=y>>lineageos_${C1MODEL}_defconfig
-sed -i 's/# CONFIG_FM34_WE395 is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_FM34_WE395=y>>lineageos_${C1MODEL}_defconfig
-echo CONFIG_WLAN_REGION_CODE=203>>lineageos_${C1MODEL}_defconfig
-sed -i 's/# CONFIG_SEC_MODEM_C1_LGT is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_SEC_MODEM_C1_LGT=y>>lineageos_${C1MODEL}_defconfig
-sed -i 's/# CONFIG_CDMA_MODEM_CBP72 is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_CDMA_MODEM_CBP72=y>>lineageos_${C1MODEL}_defconfig
-sed -i 's/# CONFIG_LTE_VIA_SWITCH is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_LTE_VIA_SWITCH=y>>lineageos_${C1MODEL}_defconfig
-echo CONFIG_CMC_MODEM_HSIC_SYSREV=11>>lineageos_${C1MODEL}_defconfig
+echo CONFIG_MACH_C1_KOR_LGT=y>>$KCFG
+echo CONFIG_C1_LGT_EXPERIMENTAL=y>>$KCFG
+sed -i 's/# CONFIG_FM34_WE395 is not set//' $KCFG
+echo CONFIG_FM34_WE395=y>>$KCFG
+echo CONFIG_WLAN_REGION_CODE=203>>$KCFG
+sed -i 's/# CONFIG_SEC_MODEM_C1_LGT is not set//' $KCFG
+echo CONFIG_SEC_MODEM_C1_LGT=y>>$KCFG
+sed -i 's/# CONFIG_CDMA_MODEM_CBP72 is not set//' $KCFG
+echo CONFIG_CDMA_MODEM_CBP72=y>>$KCFG
+sed -i 's/# CONFIG_LTE_VIA_SWITCH is not set//' $KCFG
+echo CONFIG_LTE_VIA_SWITCH=y>>$KCFG
+echo CONFIG_CMC_MODEM_HSIC_SYSREV=11>>$KCFG
 elif [ "$C1MODEL" = "c1skt" ]; then
-echo CONFIG_MACH_C1_KOR_SKT=y>>lineageos_${C1MODEL}_defconfig
-echo CONFIG_WLAN_REGION_CODE=201>>lineageos_${C1MODEL}_defconfig
-sed -i 's/# CONFIG_SEC_MODEM_C1 is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_SEC_MODEM_C1=y>>lineageos_${C1MODEL}_defconfig
-echo CONFIG_CMC_MODEM_HSIC_SYSREV=9>>lineageos_${C1MODEL}_defconfig
+echo CONFIG_MACH_C1_KOR_SKT=y>>$KCFG
+echo CONFIG_WLAN_REGION_CODE=201>>$KCFG
+sed -i 's/# CONFIG_SEC_MODEM_C1 is not set//' $KCFG
+echo CONFIG_SEC_MODEM_C1=y>>$KCFG
+echo CONFIG_CMC_MODEM_HSIC_SYSREV=9>>$KCFG
 elif [ "$C1MODEL" = "c1ktt" ]; then
-echo CONFIG_MACH_C1_KOR_SKT=y>>lineageos_${C1MODEL}_defconfig
-echo CONFIG_WLAN_REGION_CODE=202>>lineageos_${C1MODEL}_defconfig
-sed -i 's/# CONFIG_SEC_MODEM_C1 is not set//' lineageos_${C1MODEL}_defconfig
-echo CONFIG_SEC_MODEM_C1=y>>lineageos_${C1MODEL}_defconfig
-echo CONFIG_CMC_MODEM_HSIC_SYSREV=9>>lineageos_${C1MODEL}_defconfig
+echo CONFIG_MACH_C1_KOR_SKT=y>>$KCFG
+echo CONFIG_WLAN_REGION_CODE=202>>$KCFG
+sed -i 's/# CONFIG_SEC_MODEM_C1 is not set//' $KCFG
+echo CONFIG_SEC_MODEM_C1=y>>$KCFG
+echo CONFIG_CMC_MODEM_HSIC_SYSREV=9>>$KCFG
 fi
 # Now that everything is configured correctly we can run breakfast again and it should complete without errors
 croot
