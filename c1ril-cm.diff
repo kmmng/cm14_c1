@@ -1,16 +1,16 @@
---- SamsungExynos4RIL.orig	2017-01-18 15:00:12.931905900 +0200
-+++ SamsungExynos4RIL.java	2017-01-19 22:29:54.400410800 +0200
+--- SamsungExynos4RIL.bak	2017-10-18 19:57:58.277084100 +0300
++++ SamsungExynos4RIL.java	2017-10-18 20:14:06.896183100 +0300
 @@ -15,11 +15,21 @@
   * limitations under the License.
   */
  
 +/*
-+Custom RIL for Samsung Galaxy S3 Korean C1 models.
-+Based on multiple RILs :
++Custom RIL for Samsung Galaxy S3 Korean C1 models by KMMNG
++Based on multiple RILs
 +https://github.com/CyanogenMod/android_device_samsung_i9300/blob/stable/cm-13.0-ZNH5Y/ril/telephony/java/com/android/internal/telephony/SamsungExynos4RIL.java
 +https://github.com/FullGreen/android_device_samsung_c1skt/blob/cm-13.0/ril/telephony/java/com/android/internal/telephony/SamsungExynos4RIL.java
 +https://github.com/CyanogenMod/android_device_samsung_i9500/blob/cm-13.0/ril/telephony/java/com/android/internal/telephony/ExynosXMM6360RIL.java
-+And on original research
++and more RILs, and on original research
 +*/
 +
  package com.android.internal.telephony;
@@ -22,19 +22,31 @@
  import android.os.AsyncResult;
  import android.os.Handler;
  import android.os.Message;
-@@ -29,6 +39,11 @@ import android.telephony.ModemActivityIn
+@@ -29,6 +39,14 @@
  import android.telephony.Rlog;
  
  import android.telephony.PhoneNumberUtils;
 +import com.android.internal.telephony.gsm.SmsBroadcastConfigInfo;
 +import com.android.internal.telephony.cdma.CdmaSmsBroadcastConfigInfo;
++import com.android.internal.telephony.uicc.IccCardApplicationStatus;
++import com.android.internal.telephony.uicc.IccCardStatus;
++import com.android.internal.telephony.uicc.IccRefreshResponse;
 +import java.io.IOException;
 +import java.util.ArrayList;
 +import java.util.Collections;
  
  public class SamsungExynos4RIL extends RIL implements CommandsInterface {
  
-@@ -119,8 +134,11 @@ public class SamsungExynos4RIL extends R
+@@ -104,7 +122,7 @@
+     static final int RIL_UNSOL_DHA_STATE = 11019;
+     static final int RIL_UNSOL_UART = 11020;
+     static final int RIL_UNSOL_RESPONSE_HANDOVER = 11021;
+-    static final int RIL_UNSOL_IPV6_ADDR = 11022;
++    static final int RIL_UNSOL_PCMCLOCK_STATE = 11022;
+     static final int RIL_UNSOL_NWK_INIT_DISC_REQUEST = 11023;
+     static final int RIL_UNSOL_RTS_INDICATION = 11024;
+     static final int RIL_UNSOL_OMADM_SEND_DATA = 11025;
+@@ -119,8 +137,11 @@
      private Object mCatProCmdBuffer;
      /* private Message mPendingGetSimStatus; */
  
@@ -46,11 +58,11 @@
      }
  
      static String
-@@ -139,6 +157,89 @@ public class SamsungExynos4RIL extends R
+@@ -139,6 +160,144 @@
          }
      }
  
-+
++    @Override
 +    protected Object
 +    responseCallList(Parcel p) {
 +        int num;
@@ -58,6 +70,7 @@
 +        DriverCall dc;
 +
 +        num = p.readInt();
++
 +        response = new ArrayList<DriverCall>(num);
 +
 +        if (RILJ_LOGV) {
@@ -65,22 +78,26 @@
 +                    " mEmergencyCallbackModeRegistrant=" + mEmergencyCallbackModeRegistrant +
 +                    " mTestingEmergencyCall=" + mTestingEmergencyCall.get());
 +        }
++
 +        for (int i = 0 ; i < num ; i++) {
 +            dc = new DriverCall();
-+
 +            dc.state = DriverCall.stateFromCLCC(p.readInt());
-+            dc.index = p.readInt();
++            dc.index = p.readInt(); //& 0xff only for libsec-ril from 4.4.4
 +            dc.TOA = p.readInt();
-+            dc.isMpty = (0 != p.readInt());
-+            dc.isMT = (0 != p.readInt());
++            dc.isMpty = p.readInt() != 0;
++            dc.isMT = p.readInt() != 0;
 +            dc.als = p.readInt();
 +            dc.isVoice = p.readInt() != 0;
-+            p.readInt(); //ignore isVideo
++            p.readInt(); // ignore isVideo
++            /* Only for libsec-ril from 4.4.4
++            p.readInt(); // ignore type
++            p.readInt(); // ignore domain
++            p.readString(); // ignore extras - up to here */
 +            dc.isVoicePrivacy = (0 != p.readInt());
 +            dc.number = p.readString();
 +            int np = p.readInt();
 +            dc.numberPresentation = DriverCall.presentationFromCLIP(np);
-+            p.readInt(); // Ignore dcs
++            p.readInt(); // ignore DCS
 +            dc.name = p.readString();
 +            dc.namePresentation = p.readInt();
 +            int uusInfoPresent = p.readInt();
@@ -103,10 +120,10 @@
 +
 +            // Make sure there's a leading + on addresses with a TOA of 145
 +            dc.number = PhoneNumberUtils.stringFromStringAndTOA(dc.number, dc.TOA);
-+            p.readInt(); //ignore numberpluseTOA
-+            p.readString(); //ignore numberpluse
-+            p.readInt(); //ignore numberplusePresentation
-+
++            /* Only for E210S libsec-ril
++            p.readInt(); // ignore numberpluseTOA
++            p.readString(); // ignore numberpluse
++            p.readInt(); // ignore numberplusePresentation */
 +            response.add(dc);
 +
 +            if (dc.isVoicePrivacy) {
@@ -132,32 +149,87 @@
 +
 +    }
 +
++    @Override
++    protected Object
++    responseIccCardStatus(Parcel p) {
++        IccCardApplicationStatus appStatus;
 +
++        IccCardStatus cardStatus = new IccCardStatus();
++        cardStatus.setCardState(p.readInt());
++        cardStatus.setUniversalPinState(p.readInt());
++        cardStatus.mGsmUmtsSubscriptionAppIndex = p.readInt();
++        cardStatus.mCdmaSubscriptionAppIndex = p.readInt();
++
++        cardStatus.mImsSubscriptionAppIndex = p.readInt();
++
++        int numApplications = p.readInt();
++
++        // limit to maximum allowed applications
++        if (numApplications > IccCardStatus.CARD_MAX_APPS) {
++            numApplications = IccCardStatus.CARD_MAX_APPS;
++        }
++        cardStatus.mApplications = new IccCardApplicationStatus[numApplications];
++
++        for (int i = 0 ; i < numApplications ; i++) {
++            appStatus = new IccCardApplicationStatus();
++            appStatus.app_type       = appStatus.AppTypeFromRILInt(p.readInt());
++            appStatus.app_state      = appStatus.AppStateFromRILInt(p.readInt());
++            appStatus.perso_substate = appStatus.PersoSubstateFromRILInt(p.readInt());
++            appStatus.aid            = p.readString();
++            appStatus.app_label      = p.readString();
++            appStatus.pin1_replaced  = p.readInt();
++            appStatus.pin1           = appStatus.PinStateFromRILInt(p.readInt());
++            appStatus.pin2           = appStatus.PinStateFromRILInt(p.readInt());
++            p.readInt();
++            p.readInt();
++            p.readInt();
++            p.readInt();
++            p.readInt();
++            cardStatus.mApplications[i] = appStatus;
++        }
++        return cardStatus;
++    }
++
++    @Override
++    protected Object
++    responseSimRefresh(Parcel p) {
++        IccRefreshResponse response = new IccRefreshResponse();
++
++        response.refreshResult = p.readInt();
++        response.efId   = p.readInt();
++        response.aid = "";
++        return response;
++    }
  
      @Override
      protected RILRequest processSolicited (Parcel p) {
-@@ -415,6 +516,9 @@ public class SamsungExynos4RIL extends R
+@@ -415,7 +574,10 @@
          RILRequest rr = RILRequest.obtain(RIL_REQUEST_DIAL, result);
          rr.mParcel.writeString(address);
          rr.mParcel.writeInt(clirMode);
-+
-+
-+
- 
+-
++        // Only for new libsec-ril
++        rr.mParcel.writeInt(0);
++        rr.mParcel.writeInt(1);
++        rr.mParcel.writeString(""); // up to here
          if (uusInfo == null) {
              rr.mParcel.writeInt(0); // UUS information is absent
-@@ -437,6 +541,10 @@ public class SamsungExynos4RIL extends R
+         } else {
+@@ -435,8 +597,12 @@
+         Rlog.v(RILJ_LOG_TAG, "Emergency dial: " + address);
+ 
          RILRequest rr = RILRequest.obtain(RIL_REQUEST_DIAL_EMERGENCY, result);
-         rr.mParcel.writeString(address + "/");
+-        rr.mParcel.writeString(address + "/");
++        rr.mParcel.writeString(address);
          rr.mParcel.writeInt(clirMode);
-+
-+
-+
-+
++        // Only for new libsec-ril
++        rr.mParcel.writeInt(0);
++        rr.mParcel.writeInt(3);
++        rr.mParcel.writeString(""); // up to here
          rr.mParcel.writeInt(0);  // UUS information is absent
  
          if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
-@@ -454,6 +562,25 @@ public class SamsungExynos4RIL extends R
+@@ -454,6 +620,25 @@
          try{switch(response) {
              case RIL_UNSOL_STK_PROACTIVE_COMMAND: ret = responseString(p); break;
              case RIL_UNSOL_STK_SEND_SMS_RESULT: ret = responseInts(p); break; // Samsung STK
@@ -167,11 +239,11 @@
 +            case RIL_UNSOL_STK_CALL_CONTROL_RESULT: ret = responseVoid(p); break;
 +            case RIL_UNSOL_DEVICE_READY_NOTI: ret = responseVoid(p); break;
 +            case RIL_UNSOL_RESPONSE_HANDOVER: ret = responseVoid(p); break;
-+            case RIL_UNSOL_IPV6_ADDR: ret = responseVoid(p); break;
++            case RIL_UNSOL_PCMCLOCK_STATE: ret = responseInts(p); break;
 +            case RIL_UNSOL_ON_USSD:
 +                String[] array = null;
 +                int length = p.readInt();
-+                p.readInt(); // Ignore dcs
++                p.readInt(); // ignore DCS
 +                if (length >= 0) {
 +                        array = new String[length];
 +                        for (int i = 0 ; i < length ; i++) {
@@ -183,7 +255,7 @@
              default:
                  // Rewind the Parcel
                  p.setDataPosition(dataPosition);
-@@ -489,10 +616,58 @@ public class SamsungExynos4RIL extends R
+@@ -489,10 +674,50 @@
                              new AsyncResult (null, ret, null));
                  }
              break;
@@ -202,14 +274,6 @@
 +            break;
 +            case RIL_UNSOL_WB_AMR_STATE:
 +                setWbAmr(((int[])ret)[0]);
-+            break;
-+            case RIL_UNSOL_STK_CALL_CONTROL_RESULT:
-+            break;
-+            case RIL_UNSOL_DEVICE_READY_NOTI:
-+            break;
-+            case RIL_UNSOL_RESPONSE_HANDOVER:
-+            break;
-+            case RIL_UNSOL_IPV6_ADDR:
 +            break;
 +            case RIL_UNSOL_ON_USSD:
 +                String[] resp = (String[])ret;
@@ -242,33 +306,35 @@
      @Override
      public void setOnCatProactiveCmd(Handler h, int what, Object obj) {
          mCatProCmdRegistrant = new Registrant (h, what, obj);
-@@ -505,9 +680,11 @@ public class SamsungExynos4RIL extends R
+@@ -505,9 +730,12 @@
  
      private void
      constructGsmSendSmsRilRequest (RILRequest rr, String smscPDU, String pdu) {
 -        rr.mParcel.writeInt(2);
-+        rr.mParcel.writeInt(2);
++        rr.mParcel.writeInt(2); // 2 is the default value, 4 is in FullGreen version
          rr.mParcel.writeString(smscPDU);
          rr.mParcel.writeString(pdu);
-+
-+
++        /* FullGreen addition
++        rr.mParcel.writeString(Integer.toString(0));
++        rr.mParcel.writeString(Integer.toString(1)); */
      }
  
      /**
-@@ -527,4 +704,85 @@ public class SamsungExynos4RIL extends R
+@@ -527,4 +755,86 @@
          send(rr);
      }
  
++    // Only for new libsec-ril
 +    @Override
 +    public void
 +    acceptCall (Message result) {
 +        RILRequest rr
 +        = RILRequest.obtain(RIL_REQUEST_ANSWER, result);
 +        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
-+
-+
++        rr.mParcel.writeInt(1);
++        rr.mParcel.writeInt(0);
 +        send(rr);
-+    }
++    } // up to here
 +
 +    @Override
 +    public void getRadioCapability(Message response) {

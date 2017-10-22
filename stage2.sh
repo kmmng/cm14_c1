@@ -4,7 +4,7 @@ SDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #if grep -q Microsoft /proc/version; then
 #BDIR=/mnt/e/wsl/cm14
 #else
-BDIR=~/android/cm14
+BDIR=~/cm14
 #fi
 if [ ! "$C1MODEL" ]; then
 C1MODEL=c1lgt
@@ -123,7 +123,7 @@ echo \</resources\>>>overlay/packages/services/Telephony/res/values/config.xml
 # Patch smdk4412 common files
 cd ../smdk4412-common
 git checkout -f
-# TODO Make this change only for c1 with if
+# TODO Make this change only for c1
 sed -i 's/phone-xhdpi-1024-dalvik-heap/phone-xhdpi-2048-dalvik-heap/' common.mk
 sed -i "s/i9300 i9305/i9300 c1lgt c1skt c1ktt i9305/g" Android.mk
 sed -i "s/i9300 i9305/i9300 c1lgt c1skt c1ktt i9305/g" extract-files.sh
@@ -264,4 +264,5 @@ echo CONFIG_CMC_MODEM_HSIC_SYSREV=9>>lineageos_${C1MODEL}_defconfig
 fi
 # Now that everything is configured correctly we can run breakfast again and it should complete without errors
 croot
+export WITH_SU=true
 breakfast $C1MODEL

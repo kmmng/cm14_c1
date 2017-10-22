@@ -16,7 +16,7 @@ fi
 #if grep -q Microsoft /proc/version; then
 #BDIR=/mnt/e/wsl/cm14
 #else
-BDIR=~/android/cm14
+BDIR=~/cm14
 #fi
 echo Building LineageOS 14.1 for SHV-E210$C1VAR, this may take a long time...
 cd $BDIR
@@ -38,4 +38,5 @@ prebuilts/misc/linux-x86/ccache/ccache -M 50G
 fi
 source build/envsetup.sh
 # Compile
+export WITH_SU=true
 brunch $C1MODEL
