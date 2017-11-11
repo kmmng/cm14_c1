@@ -19,16 +19,16 @@ echo Building LineageOS 14.1 for SHV-E210$C1VAR, this may take a long time...
 cd $BDIR
 # Workarounds for WSL
 if grep -q Microsoft /proc/version; then
-#cd build
-#git checkout -f
-#sed -i 's/mk_timer schedtool -B -n 1 -e ionice -n 1 //g' envsetup.sh
-#cd ..
-#cp /usr/bin/bison prebuilts/misc/linux-x86/bison/
-#cp /usr/bin/python2.7 prebuilts/python/linux-x86/2.7.5/bin/
-#cd external/v8
-#git checkout -f
-#sed -i 's/ENABLE_V8_SNAPSHOT = true/ENABLE_V8_SNAPSHOT = false/' Android.mk
-#cd ../..
+# Patcj ijar to work with WSL, thanks to Reker
+patch --no-backup-if-mismatch -t -r - -N build/tools/ijar/zip.cc < $SDIR/wslbuild.diff
+# Use system bison just to build correct version of bison, then replace it with newly built one
+if [ ! -f out/host/linux-x86/bin/bison ]; then
+cp /usr/bin/bison prebuilts/misc/linux-x86/bison/
+make bison
+fi
+cp out/host/linux-x86/bin/bison prebuilts/misc/linux-x86/bison/
+mkdir -p prebuilts/misc/linux-x86/lib64/
+cp out/host/linux-x86/lib64/libc++.so prebuilts/misc/linux-x86/lib64/
 else
 # We don't use ccache under WSL as it seems to cause problems
 export USE_CCACHE=1

@@ -98,6 +98,7 @@ sed -i "s/i9300/$C1MODEL/g" $C1MODEL.mk
 sed -i "s/m0/$C1MODEL/g" $C1MODEL.mk
 # Patch RILJ
 patch --no-backup-if-mismatch -t -r - ril/telephony/java/com/android/internal/telephony/SamsungExynos4RIL.java < $SDIR/c1ril-cm.diff
+sed -i 's/import java.io.IOException;/import com.android.internal.telephony.uicc.IccUtils;\nimport java.io.IOException;/' ril/telephony/java/com/android/internal/telephony/SamsungExynos4RIL.java
 # Add more proprietary files
 echo lib/libomission_avoidance.so>>proprietary-files.txt
 echo lib/libril.so>>proprietary-files.txt
@@ -118,6 +119,10 @@ echo \<?xml version=\"1.0\" encoding=\"utf-8\"?\>>overlay/packages/apps/SamsungS
 echo \<resources\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
 echo \<integer name=\"config_api_version\"\>2\</integer\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
 echo \</resources\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
+# Fix cellular data by making telephony provider use storage paths hardcoded in libsec-ril
+mkdir -p overlay/packages/providers/TelephonyProvider
+cp $BDIR/packages/providers/TelephonyProvider/AndroidManifest.xml overlay/packages/providers/TelephonyProvider/
+sed -i 's/defaultToDeviceProtectedStorage="true"/defaultToDeviceProtectedStorage="false"/' overlay/packages/providers/TelephonyProvider/AndroidManifest.xml
 # Patch smdk4412 common files
 cd ../smdk4412-common
 git checkout -f
