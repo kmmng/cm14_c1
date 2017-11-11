@@ -120,10 +120,6 @@ echo \<?xml version=\"1.0\" encoding=\"utf-8\"?\>>overlay/packages/apps/SamsungS
 echo \<resources\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
 echo \<integer name=\"config_api_version\"\>2\</integer\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
 echo \</resources\>>>overlay/packages/apps/SamsungServiceMode/res/values/config.xml
-# Fix cellular data by making telephony provider use storage paths hardcoded in libsec-ril
-mkdir -p overlay/packages/providers/TelephonyProvider
-cp $BDIR/packages/providers/TelephonyProvider/AndroidManifest.xml overlay/packages/providers/TelephonyProvider/
-sed -i 's/defaultToDeviceProtectedStorage="true"/defaultToDeviceProtectedStorage="false"/' overlay/packages/providers/TelephonyProvider/AndroidManifest.xml
 # Patch smdk4412 common files
 cd ../smdk4412-common
 git checkout -f
@@ -158,6 +154,8 @@ sed -i 's/    RIL_onRequestAck/#ifndef RIL_PRE_M_BLOBS\n    RIL_onRequestAck\n#e
 croot
 # Patch rild.rc for c1
 echo "    onrestart restart cbd-lte" >> hardware/ril/rild/rild.rc
+# Fix cellular data by making telephony provider use storage paths hardcoded in libsec-ril
+sed -i 's/defaultToDeviceProtectedStorage="true"/defaultToDeviceProtectedStorage="false"/' packages/providers/TelephonyProvider/AndroidManifest.xml
 # Patch samsung kernel for c1
 cd kernel/samsung/smdk4412
 git checkout -f
