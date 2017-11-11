@@ -81,7 +81,8 @@ sed -i 's/m0xx-user 4\.3 JSS15J E210KXXUGMJ9 release-keys/c1ktt-user 4.4.4 KTU84
 fi
 sed -i "s/m0xx/$C1MODEL/" lineage.mk
 sed -i "s/m0/$C1MODEL/" lineage.mk
-# Add settings to build.prop
+# Change settings of build.prop
+sed -i '/ro.ril.telephony.mqanelements/d' system.prop
 echo ro.tvout.enable=true>>system.prop
 echo persist.radio.add_power_save=1>>system.prop
 echo persist.radio.snapshot_enabled=1>>system.prop
