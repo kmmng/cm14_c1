@@ -55,7 +55,7 @@ sed -i -e "s/mmcblk0p12/mmcblk0p13/" -e "s/mmcblk0p11/mmcblk0p12/" -e "s/mmcblk0
 #sed -i "s/\/dev\/cdma_rfs0                          u:object_r:radio_device:s0/\/dev\/cdma_rfs0                          u:object_r:radio_device:s0\n\/dev\/cdma_multipdp                      u:object_r:radio_device:s0/" selinux/file_contexts
 fi
 sed -i "s@export LD_SHIM_LIBS /system/lib/libsec-ril@export LD_SHIM_LIBS /system/lib/libril@" rootdir/init.target.rc
-sed -i "s/    write \/data\/.cid.info 0/    write \/data\/.cid.info murata\n    chown wifi system \/data\/.cid.info\n    chmod 0660 \/data\/.cid.info/" rootdir/init.target.rc
+sed -i '/    write \/data\/.cid.info 0/d' rootdir/init.target.rc
 sed -i "s/service cpboot-daemon \/system\/bin\/cbd -d/service cbd-lte \/system\/bin\/cbd -d -t cmc221 -b d -m d/" rootdir/init.target.rc
 sed -i "s/i9300/$C1MODEL/g" selinux/file_contexts
 sed -i "s/i9300/$C1MODEL/g" Android.mk
@@ -64,8 +64,7 @@ sed -i "s/i9300/$C1MODEL/g" BoardConfig.mk
 sed -i "s/GT-I9300/SHV-E210$C1VAR/g" BoardConfig.mk
 # Enlarge system partition
 sed -i 's/# assert/# system partition size\nBOARD_SYSTEMIMAGE_PARTITION_SIZE := 2147483648\n\n# assert/' BoardConfig.mk
-# Definition for rild patch
-sed -i "s/-DDISABLE_ASHMEM_TRACKING/-DDISABLE_ASHMEM_TRACKING -DRIL_PRE_M_BLOBS/" BoardConfig.mk
+sed -i "s/-DDISABLE_ASHMEM_TRACKING/-DDISABLE_ASHMEM_TRACKING -DRIL_PRE_M_BLOBS -DC1_WIFI_FIX/" BoardConfig.mk
 sed -i "s/i9300/$C1MODEL/g" lineage.mk
 sed -i "s/GT-I9300/SHV-E210$C1VAR/g" lineage.mk
 sed -i "s/I9300/E210$C1VAR/g" lineage.mk
@@ -137,11 +136,13 @@ cd ../$C1MODEL
 # Now we can copy proprietary files to vendor directory
 . ./extract-files.sh $SDIR/blobs/
 croot
-# Configure samsung libril to be built like for i9300. It is needed for dependencies but won't be used anyway.
 cd hardware/samsung
 git checkout -f
+# Configure samsung libril to be built like for i9300. It is needed for dependencies but won't be used anyway.
 sed -i "s/xmm6262 xmm6360/xmm6262 cmc221 xmm6360/g" ril/Android.mk
 sed -i "s/xmm6262 xmm6360/xmm6262 cmc221 xmm6360/g" ril/libril/Android.mk
+# Workaround for incomplete MAC address list of macloader
+sed -i 's/    int type = NONE;/#ifdef C1_WIFI_FIX\n    int type = MURATA;\n#else\n    int type = NONE;\n#endif/' macloader/macloader.c
 # Patch rild to load properitary libril, thanks to Haxynox
 cd ../ril
 git checkout -f
