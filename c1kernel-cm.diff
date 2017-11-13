@@ -1,6 +1,6 @@
-diff -uprN android_kernel_samsung_smdk4412/arch/arm/mach-exynos/board-c1lgt-modems.c android_kernel_samsung_c1/arch/arm/mach-exynos/board-c1lgt-modems.c
---- android_kernel_samsung_smdk4412/arch/arm/mach-exynos/board-c1lgt-modems.c	2016-07-17 17:06:15.867328048 +0300
-+++ android_kernel_samsung_c1/arch/arm/mach-exynos/board-c1lgt-modems.c	2016-07-17 19:06:43.198905135 +0300
+diff -uprN android_kernel_samsung_smdk4412_bak/arch/arm/mach-exynos/board-c1lgt-modems.c android_kernel_samsung_smdk4412/arch/arm/mach-exynos/board-c1lgt-modems.c
+--- android_kernel_samsung_smdk4412_bak/arch/arm/mach-exynos/board-c1lgt-modems.c	2017-11-13 12:27:41.467217100 +0200
++++ android_kernel_samsung_smdk4412/arch/arm/mach-exynos/board-c1lgt-modems.c	2017-11-13 12:24:30.484788600 +0200
 @@ -25,7 +25,7 @@
  
  /* inlcude platform specific file */
@@ -777,7 +777,7 @@ diff -uprN android_kernel_samsung_smdk4412/arch/arm/mach-exynos/board-c1lgt-mode
  	err = gpio_direction_output(umts_modem_data.gpio_host_active, enable);
  	mif_info("active state err(%d), en(%d), level(%d)\n",
  		err, enable, gpio_get_value(umts_modem_data.gpio_host_active));
-@@ -1261,6 +1213,14 @@ static int __init init_modem(void)
+@@ -1261,18 +1213,30 @@ static int __init init_modem(void)
  
  	mif_err("System Revision = %d\n", system_rev);
  
@@ -792,22 +792,55 @@ diff -uprN android_kernel_samsung_smdk4412/arch/arm/mach-exynos/board-c1lgt-mode
  	/*
  	** Complete modem_data configuration including link_pm_data
  	*/
-@@ -1302,12 +1262,6 @@ static int __init init_modem(void)
- 	sromc_config_access_timing(bnk_cfg->csn, tm_cfg);
+ 	umts_modem_data.link_pm_data = &umts_link_pm_data,
+ 	setup_umts_modem_env();
++#if !defined(CONFIG_C1_LGT_EXPERIMENTAL)
+ 	setup_cdma_modem_env();
++#endif
  
  	/*
+ 	** Configure GPIO pins for the modem
+ 	*/
+ 	config_umts_modem_gpio();
++#if !defined(CONFIG_C1_LGT_EXPERIMENTAL)
+ 	config_cdma_modem_gpio();
++#endif
+ 	active_ctl.gpio_initialized = 1;
+ 
+ 	/*
+@@ -1293,6 +1257,7 @@ static int __init init_modem(void)
+ 	tm_cfg = &cmc_idpram_timing_cfg[DPRAM_SPEED_LOW];
+ 	sromc_config_access_timing(bnk_cfg->csn, tm_cfg);
+ 
++#if !defined(CONFIG_C1_LGT_EXPERIMENTAL)
+ 	bnk_cfg = &cbp_edpram_bank_cfg;
+ 	if (sromc_config_csn_gpio(bnk_cfg->csn) < 0)
+ 		return -1;
+@@ -1300,18 +1265,15 @@ static int __init init_modem(void)
+ 
+ 	tm_cfg = &cbp_edpram_timing_cfg;
+ 	sromc_config_access_timing(bnk_cfg->csn, tm_cfg);
+-
+-	/*
 -	** Remap SFR region for CMC22x IDPRAM
 -	*/
 -	if (!cmc_idpram_remap_sfr_region(&cmc_idpram_bank_cfg))
 -		return -1;
--
--	/*
++#endif
+ 
+ 	/*
  	** Register the modem devices
  	*/
  	platform_device_register(&umts_modem);
-diff -uprN android_kernel_samsung_smdk4412/arch/arm/mach-exynos/board-c1-modems.c android_kernel_samsung_c1/arch/arm/mach-exynos/board-c1-modems.c
---- android_kernel_samsung_smdk4412/arch/arm/mach-exynos/board-c1-modems.c	2016-07-17 17:06:15.867328048 +0300
-+++ android_kernel_samsung_c1/arch/arm/mach-exynos/board-c1-modems.c	2015-01-13 05:10:11.000000000 +0200
++#if !defined(CONFIG_C1_LGT_EXPERIMENTAL)
+ 	platform_device_register(&cdma_modem);
++#endif
+ 
+ 	return 0;
+ }
+diff -uprN android_kernel_samsung_smdk4412_bak/arch/arm/mach-exynos/board-c1-modems.c android_kernel_samsung_smdk4412/arch/arm/mach-exynos/board-c1-modems.c
+--- android_kernel_samsung_smdk4412_bak/arch/arm/mach-exynos/board-c1-modems.c	2017-11-13 12:27:41.482744600 +0200
++++ android_kernel_samsung_smdk4412/arch/arm/mach-exynos/board-c1-modems.c	2017-11-13 11:50:21.322365300 +0200
 @@ -25,7 +25,7 @@
  
  /* inlcude platform specific file */
@@ -1377,9 +1410,9 @@ diff -uprN android_kernel_samsung_smdk4412/arch/arm/mach-exynos/board-c1-modems.
  	** Register the modem device
  	*/
  	platform_device_register(&umts_modem);
-diff -uprN android_kernel_samsung_smdk4412/arch/arm/mach-exynos/include/mach/cpufreq.h android_kernel_samsung_c1/arch/arm/mach-exynos/include/mach/cpufreq.h
---- android_kernel_samsung_smdk4412/arch/arm/mach-exynos/include/mach/cpufreq.h	2016-07-17 17:06:15.875328045 +0300
-+++ android_kernel_samsung_c1/arch/arm/mach-exynos/include/mach/cpufreq.h	2015-01-13 05:10:11.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/arch/arm/mach-exynos/include/mach/cpufreq.h android_kernel_samsung_smdk4412/arch/arm/mach-exynos/include/mach/cpufreq.h
+--- android_kernel_samsung_smdk4412_bak/arch/arm/mach-exynos/include/mach/cpufreq.h	2017-11-13 12:27:41.493476100 +0200
++++ android_kernel_samsung_smdk4412/arch/arm/mach-exynos/include/mach/cpufreq.h	2017-11-13 11:50:21.332538800 +0200
 @@ -39,6 +39,7 @@ enum cpufreq_lock_ID {
  	DVFS_LOCK_ID_MFC,	/* MFC */
  	DVFS_LOCK_ID_USB,	/* USB */
@@ -1388,9 +1421,9 @@ diff -uprN android_kernel_samsung_smdk4412/arch/arm/mach-exynos/include/mach/cpu
  	DVFS_LOCK_ID_CAM,	/* CAM */
  	DVFS_LOCK_ID_PM,	/* PM */
  	DVFS_LOCK_ID_USER,	/* USER */
-diff -uprN android_kernel_samsung_smdk4412/arch/arm/mach-exynos/include/mach/gpio-rev03-c1kor.h android_kernel_samsung_c1/arch/arm/mach-exynos/include/mach/gpio-rev03-c1kor.h
---- android_kernel_samsung_smdk4412/arch/arm/mach-exynos/include/mach/gpio-rev03-c1kor.h	2016-07-17 17:06:15.875328045 +0300
-+++ android_kernel_samsung_c1/arch/arm/mach-exynos/include/mach/gpio-rev03-c1kor.h	2015-01-13 05:10:11.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/arch/arm/mach-exynos/include/mach/gpio-rev03-c1kor.h android_kernel_samsung_smdk4412/arch/arm/mach-exynos/include/mach/gpio-rev03-c1kor.h
+--- android_kernel_samsung_smdk4412_bak/arch/arm/mach-exynos/include/mach/gpio-rev03-c1kor.h	2017-11-13 12:27:41.505147800 +0200
++++ android_kernel_samsung_smdk4412/arch/arm/mach-exynos/include/mach/gpio-rev03-c1kor.h	2017-11-13 11:50:21.342371200 +0200
 @@ -157,8 +157,6 @@ extern void midas_config_sleep_gpio_tabl
  #define GPIO_PWM2		EXYNOS4_GPD0(2)
  #define GPIO_PWM3		EXYNOS4_GPD0(3)
@@ -1424,9 +1457,9 @@ diff -uprN android_kernel_samsung_smdk4412/arch/arm/mach-exynos/include/mach/gpi
  
  /* Definitions for an USB HUB for CMC221 */
  #define GPIO_USB_HUB_RST	EXYNOS4_GPL0(0)
-diff -uprN android_kernel_samsung_smdk4412/arch/arm/mach-exynos/Kconfig.local android_kernel_samsung_c1/arch/arm/mach-exynos/Kconfig.local
---- android_kernel_samsung_smdk4412/arch/arm/mach-exynos/Kconfig.local	2016-07-17 17:06:15.863328050 +0300
-+++ android_kernel_samsung_c1/arch/arm/mach-exynos/Kconfig.local	2016-07-17 19:05:08.939376822 +0300
+diff -uprN android_kernel_samsung_smdk4412_bak/arch/arm/mach-exynos/Kconfig.local android_kernel_samsung_smdk4412/arch/arm/mach-exynos/Kconfig.local
+--- android_kernel_samsung_smdk4412_bak/arch/arm/mach-exynos/Kconfig.local	2017-11-13 12:27:41.514894500 +0200
++++ android_kernel_samsung_smdk4412/arch/arm/mach-exynos/Kconfig.local	2017-11-13 11:50:21.350401900 +0200
 @@ -165,8 +165,13 @@ config MACH_C1_KOR_KT
  
  config MACH_C1_KOR_LGT
@@ -1441,9 +1474,9 @@ diff -uprN android_kernel_samsung_smdk4412/arch/arm/mach-exynos/Kconfig.local an
  choice
  	prompt "M0 KOR Target Carrier"
  	depends on MACH_M0 && TARGET_LOCALE_KOR
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/Kconfig android_kernel_samsung_c1/drivers/misc/Kconfig
---- android_kernel_samsung_smdk4412/drivers/misc/Kconfig	2016-07-17 17:06:17.019327502 +0300
-+++ android_kernel_samsung_c1/drivers/misc/Kconfig	2016-07-17 19:05:08.963376703 +0300
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/Kconfig android_kernel_samsung_smdk4412/drivers/misc/Kconfig
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/Kconfig	2017-11-13 12:27:41.521158000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/Kconfig	2017-11-13 11:50:21.355423100 +0200
 @@ -702,7 +702,12 @@ source "drivers/misc/lis3lv02d/Kconfig"
  source "drivers/misc/carma/Kconfig"
  source "drivers/misc/c2c/Kconfig"
@@ -1457,9 +1490,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/Kconfig android_kernel_s
  source "drivers/misc/modem_if_na/Kconfig"
  if MACH_U1
  source "drivers/misc/modem_if_u1/Kconfig"
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/Makefile android_kernel_samsung_c1/drivers/misc/Makefile
---- android_kernel_samsung_smdk4412/drivers/misc/Makefile	2016-07-17 17:06:17.019327502 +0300
-+++ android_kernel_samsung_c1/drivers/misc/Makefile	2016-07-17 19:05:08.963376703 +0300
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/Makefile android_kernel_samsung_smdk4412/drivers/misc/Makefile
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/Makefile	2017-11-13 12:27:41.531300200 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/Makefile	2017-11-13 11:50:21.363134100 +0200
 @@ -62,9 +62,13 @@ else
  ifeq ($(CONFIG_MACH_U1),y)
  obj-$(CONFIG_SEC_MODEM)		+= modem_if_u1/
@@ -1474,9 +1507,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/Makefile android_kernel_
  obj-$(CONFIG_MFD_MAX77693)	+= max77693-muic.o
  obj-$(CONFIG_STMPE811_ADC)	+= stmpe811-adc.o
  obj-$(CONFIG_JACK_MON)		+= jack.o
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/Kconfig android_kernel_samsung_c1/drivers/misc/modem_if_c1/Kconfig
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/Kconfig	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/Kconfig	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/Kconfig android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/Kconfig
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/Kconfig	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/Kconfig	2017-11-13 11:50:21.367818600 +0200
 @@ -0,0 +1,104 @@
 +menuconfig SEC_MODEM
 +	bool "Samsung Mobile Modem Interface"
@@ -1582,9 +1615,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/Kconfig andr
 +	bool "SIM_SLOT_SWITCH"
 +	depends on SEC_MODEM
 +	default n
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/lte_modem_bootloader.c android_kernel_samsung_c1/drivers/misc/modem_if_c1/lte_modem_bootloader.c
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/lte_modem_bootloader.c	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/lte_modem_bootloader.c	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/lte_modem_bootloader.c android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/lte_modem_bootloader.c
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/lte_modem_bootloader.c	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/lte_modem_bootloader.c	2017-11-13 11:50:21.371840400 +0200
 @@ -0,0 +1,313 @@
 +/* Lte modem bootloader support for Samsung Tuna Board.
 + *
@@ -1899,9 +1932,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/lte_modem_bo
 +
 +MODULE_DESCRIPTION("LTE Modem Bootloader driver");
 +MODULE_LICENSE("GPL");
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/Makefile android_kernel_samsung_c1/drivers/misc/modem_if_c1/Makefile
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/Makefile	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/Makefile	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/Makefile android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/Makefile
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/Makefile	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/Makefile	2017-11-13 11:50:21.376242200 +0200
 @@ -0,0 +1,26 @@
 +# Makefile of modem_if
 +
@@ -1929,9 +1962,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/Makefile and
 +obj-$(CONFIG_LINK_DEVICE_SPI) += modem_link_device_spi.o
 +
 +obj-$(CONFIG_SIM_SLOT_SWITCH)  += modem_sim_slot_switch.o
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_dpram.c android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_device_dpram.c
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_dpram.c	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_device_dpram.c	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_device_dpram.c android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_dpram.c
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_device_dpram.c	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_dpram.c	2017-11-13 11:50:21.381095400 +0200
 @@ -0,0 +1,2858 @@
 +/*
 + * Copyright (C) 2010 Samsung Electronics.
@@ -4791,9 +4824,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_d
 +	return NULL;
 +}
 +
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_dpram_ext_op.c android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_device_dpram_ext_op.c
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_dpram_ext_op.c	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_device_dpram_ext_op.c	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_device_dpram_ext_op.c android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_dpram_ext_op.c
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_device_dpram_ext_op.c	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_dpram_ext_op.c	2017-11-13 11:50:21.386159400 +0200
 @@ -0,0 +1,1319 @@
 +/*
 + * Copyright (C) 2010 Samsung Electronics.
@@ -6114,9 +6147,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_d
 +		return NULL;
 +}
 +
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_dpram.h android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_device_dpram.h
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_dpram.h	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_device_dpram.h	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_device_dpram.h android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_dpram.h
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_device_dpram.h	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_dpram.h	2017-11-13 11:50:21.389977500 +0200
 @@ -0,0 +1,259 @@
 +/*
 + * Copyright (C) 2010 Samsung Electronics.
@@ -6377,9 +6410,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_d
 +struct dpram_ext_op *dpram_get_ext_op(enum modem_t modem);
 +
 +#endif
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_memory.h android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_device_memory.h
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_memory.h	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_device_memory.h	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_device_memory.h android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_memory.h
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_device_memory.h	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_memory.h	2017-11-13 11:50:21.393850700 +0200
 @@ -0,0 +1,662 @@
 +/*
 + * Copyright (C) 2010 Samsung Electronics.
@@ -7043,9 +7076,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_d
 +#endif
 +
 +#endif
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_usb.c android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_device_usb.c
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_usb.c	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_device_usb.c	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_device_usb.c android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_usb.c
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_device_usb.c	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_usb.c	2017-11-13 11:50:21.398273600 +0200
 @@ -0,0 +1,1032 @@
 +/*
 + * Copyright (C) 2010 Google, Inc.
@@ -8079,9 +8112,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_d
 +	return platform_driver_register(&lte_wake_driver);
 +}
 +module_init(lte_wake_init);
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_usb.h android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_device_usb.h
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_usb.h	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_device_usb.h	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_device_usb.h android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_usb.h
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_device_usb.h	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_device_usb.h	2017-11-13 11:50:21.403192200 +0200
 @@ -0,0 +1,132 @@
 +/*
 + * Copyright (C) 2010 Google, Inc.
@@ -8215,9 +8248,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_d
 +bool usb_is_enumerated(struct modem_shared *msd);
 +
 +#endif
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_pm_usb.c android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_pm_usb.c
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_pm_usb.c	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_pm_usb.c	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_pm_usb.c android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_pm_usb.c
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_pm_usb.c	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_pm_usb.c	2017-11-13 11:50:21.408065000 +0200
 @@ -0,0 +1,432 @@
 +/*
 + * Copyright (C) 2012 Samsung Electronics.
@@ -8651,9 +8684,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_p
 +	kfree(pm_data);
 +	return err;
 +}
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_pm_usb.h android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_pm_usb.h
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_pm_usb.h	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_link_pm_usb.h	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_pm_usb.h android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_pm_usb.h
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_link_pm_usb.h	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_pm_usb.h	2017-11-13 11:50:21.412733900 +0200
 @@ -0,0 +1,65 @@
 +/*
 + * Copyright (C) 2012 Samsung Electronics.
@@ -8720,9 +8753,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_link_p
 +int link_pm_init(struct usb_link_device *usb_ld, void *data);
 +
 +#endif
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_modemctl_device_cbp72.c android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_modemctl_device_cbp72.c
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_modemctl_device_cbp72.c	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_modemctl_device_cbp72.c	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_modemctl_device_cbp72.c android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_modemctl_device_cbp72.c
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_modemctl_device_cbp72.c	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_modemctl_device_cbp72.c	2017-11-13 11:50:21.417345500 +0200
 @@ -0,0 +1,273 @@
 +/* /linux/drivers/misc/modem_if/modem_modemctl_device_cbp7.1.c
 + *
@@ -8997,9 +9030,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_modemc
 +	return 0;
 +}
 +
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_modemctl_device_cmc221.c android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_modemctl_device_cmc221.c
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_modemctl_device_cmc221.c	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_modemctl_device_cmc221.c	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_modemctl_device_cmc221.c android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_modemctl_device_cmc221.c
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_modemctl_device_cmc221.c	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_modemctl_device_cmc221.c	2017-11-13 11:50:21.421819900 +0200
 @@ -0,0 +1,383 @@
 +/* /linux/drivers/misc/modem_if/modem_modemctl_device_cmc221.c
 + *
@@ -9384,9 +9417,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_modemc
 +
 +	return 0;
 +}
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_net_flowcontrol_device.c android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_net_flowcontrol_device.c
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_net_flowcontrol_device.c	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_net_flowcontrol_device.c	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_net_flowcontrol_device.c android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_net_flowcontrol_device.c
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_net_flowcontrol_device.c	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_net_flowcontrol_device.c	2017-11-13 11:50:21.425926900 +0200
 @@ -0,0 +1,116 @@
 +/* /linux/drivers/misc/modem_if/modem_net_flowcontrol_device.c
 + *
@@ -9504,9 +9537,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_net_fl
 +
 +MODULE_LICENSE("GPL");
 +MODULE_DESCRIPTION("Samsung Modem IF Net Flowcontrol Driver");
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_prj.h android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_prj.h
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_prj.h	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_prj.h	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_prj.h android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_prj.h
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_prj.h	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_prj.h	2017-11-13 11:50:21.430376000 +0200
 @@ -0,0 +1,790 @@
 +/*
 + * Copyright (C) 2010 Google, Inc.
@@ -10298,9 +10331,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_prj.h 
 +#endif
 +
 +#endif
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_utils.c android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_utils.c
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_utils.c	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_utils.c	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_utils.c android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_utils.c
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_utils.c	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_utils.c	2017-11-13 11:50:21.435204100 +0200
 @@ -0,0 +1,1242 @@
 +/*
 + * Copyright (C) 2011 Samsung Electronics.
@@ -11544,9 +11577,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_utils.
 +	set_fs(old_fs);
 +}
 +
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_utils.h android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_utils.h
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_utils.h	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_utils.h	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_utils.h android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_utils.h
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_utils.h	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_utils.h	2017-11-13 11:50:21.439708600 +0200
 @@ -0,0 +1,307 @@
 +/*
 + * Copyright (C) 2011 Samsung Electronics.
@@ -11855,9 +11888,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_utils.
 +void mif_close_file(struct file *fp);
 +
 +#endif/*__MODEM_UTILS_H__*/
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_variation.h android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_variation.h
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_variation.h	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/modem_variation.h	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_variation.h android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_variation.h
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/modem_variation.h	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_variation.h	2017-11-13 11:50:21.443208900 +0200
 @@ -0,0 +1,175 @@
 +/*
 + * Copyright (C) 2010 Google, Inc.
@@ -12034,9 +12067,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/modem_variat
 +}
 +
 +#endif
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc4_io_device.c android_kernel_samsung_c1/drivers/misc/modem_if_c1/sipc4_io_device.c
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc4_io_device.c	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/sipc4_io_device.c	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/sipc4_io_device.c android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc4_io_device.c
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/sipc4_io_device.c	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc4_io_device.c	2017-11-13 11:50:21.448053800 +0200
 @@ -0,0 +1,1710 @@
 +/* /linux/drivers/misc/modem_if/modem_io_device.c
 + *
@@ -13748,9 +13781,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc4_io_dev
 +	return ret;
 +}
 +
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc4_modem.c android_kernel_samsung_c1/drivers/misc/modem_if_c1/sipc4_modem.c
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc4_modem.c	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/sipc4_modem.c	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/sipc4_modem.c android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc4_modem.c
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/sipc4_modem.c	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc4_modem.c	2017-11-13 11:50:21.452823400 +0200
 @@ -0,0 +1,366 @@
 +/* linux/drivers/modem/modem.c
 + *
@@ -14118,9 +14151,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc4_modem.
 +
 +MODULE_LICENSE("GPL");
 +MODULE_DESCRIPTION("Samsung Modem Interface Driver");
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc5_io_device.c android_kernel_samsung_c1/drivers/misc/modem_if_c1/sipc5_io_device.c
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc5_io_device.c	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/sipc5_io_device.c	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/sipc5_io_device.c android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc5_io_device.c
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/sipc5_io_device.c	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc5_io_device.c	2017-11-13 11:50:21.457812800 +0200
 @@ -0,0 +1,1610 @@
 +/* /linux/drivers/misc/modem_if/sipc5_io_device.c
 + *
@@ -15732,9 +15765,9 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc5_io_dev
 +	return ret;
 +}
 +
-diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc5_modem.c android_kernel_samsung_c1/drivers/misc/modem_if_c1/sipc5_modem.c
---- android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc5_modem.c	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/drivers/misc/modem_if_c1/sipc5_modem.c	2015-01-13 05:10:17.000000000 +0200
+diff -uprN android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/sipc5_modem.c android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc5_modem.c
+--- android_kernel_samsung_smdk4412_bak/drivers/misc/modem_if_c1/sipc5_modem.c	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc5_modem.c	2017-11-13 11:50:21.461779100 +0200
 @@ -0,0 +1,385 @@
 +/* linux/drivers/modem/modem.c
 + *
@@ -16121,10 +16154,10 @@ diff -uprN android_kernel_samsung_smdk4412/drivers/misc/modem_if_c1/sipc5_modem.
 +
 +MODULE_LICENSE("GPL");
 +MODULE_DESCRIPTION("Samsung Modem Interface Driver");
-Binary files android_kernel_samsung_smdk4412/.git/index and android_kernel_samsung_c1/.git/index differ
-diff -uprN android_kernel_samsung_smdk4412/include/linux/platform_data/modem_c1.h android_kernel_samsung_c1/include/linux/platform_data/modem_c1.h
---- android_kernel_samsung_smdk4412/include/linux/platform_data/modem_c1.h	1970-01-01 02:00:00.000000000 +0200
-+++ android_kernel_samsung_c1/include/linux/platform_data/modem_c1.h	2015-01-13 05:10:27.000000000 +0200
+Binary files android_kernel_samsung_smdk4412_bak/.git/index and android_kernel_samsung_smdk4412/.git/index differ
+diff -uprN android_kernel_samsung_smdk4412_bak/include/linux/platform_data/modem_c1.h android_kernel_samsung_smdk4412/include/linux/platform_data/modem_c1.h
+--- android_kernel_samsung_smdk4412_bak/include/linux/platform_data/modem_c1.h	1970-01-01 02:00:00.000000000 +0200
++++ android_kernel_samsung_smdk4412/include/linux/platform_data/modem_c1.h	2017-11-13 11:50:21.466748400 +0200
 @@ -0,0 +1,353 @@
 +/*
 + * Copyright (C) 2010 Google, Inc.

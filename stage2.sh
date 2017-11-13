@@ -1,5 +1,5 @@
 #!/bin/bash
-echo Stage 2 - prepare source for build and patch it for c1
+echo Stage 2 - prepare source for build and patch it for SHV-E210.
 SDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 eval BDIR=`cat $SDIR/builddir`
 if [ ! "$C1MODEL" ]; then
@@ -12,7 +12,7 @@ C1VAR=S
 elif [ "$C1MODEL" = "c1ktt" ]; then
 C1VAR=K
 else
-echo Unknown device model, C1MODEL should be c1lgt/c1skt/c1ktt
+echo Unknown device model, C1MODEL should be c1lgt/c1skt/c1ktt.
 exit
 fi
 echo Configuring source for SHV-E210$C1VAR...
@@ -98,7 +98,6 @@ sed -i "s/i9300/$C1MODEL/g" $C1MODEL.mk
 sed -i "s/m0/$C1MODEL/g" $C1MODEL.mk
 # Patch RILJ
 patch --no-backup-if-mismatch -t -r - ril/telephony/java/com/android/internal/telephony/SamsungExynos4RIL.java < $SDIR/c1ril-cm.diff
-sed -i 's/import java.io.IOException;/import com.android.internal.telephony.uicc.IccUtils;\nimport java.io.IOException;/' ril/telephony/java/com/android/internal/telephony/SamsungExynos4RIL.java
 # Add more proprietary files
 echo lib/libomission_avoidance.so>>proprietary-files.txt
 echo lib/libril.so>>proprietary-files.txt
@@ -160,19 +159,11 @@ sed -i 's/defaultToDeviceProtectedStorage="true"/defaultToDeviceProtectedStorage
 # Patch samsung kernel for c1
 cd kernel/samsung/smdk4412
 git checkout -f
-# Update modem drivers from Samsung sources
+# Update modem drivers from Samsung sources and patch them
 rm -rf drivers/misc/modem_if_c1
 rm -rf include/linux/platform_data/modem_c1.h
 patch --no-backup-if-mismatch -t -r - -p1 < $SDIR/c1kernel-cm.diff
-# CDMA modem is not used in this build, so we disable it and maybe save some power
-sed -i 's/	setup_cdma_modem_env();/#if !defined(CONFIG_C1_LGT_EXPERIMENTAL)\n	setup_cdma_modem_env();\n#endif/' arch/arm/mach-exynos/board-c1lgt-modems.c
-sed -i 's/	config_cdma_modem_gpio();/#if !defined(CONFIG_C1_LGT_EXPERIMENTAL)\n	config_cdma_modem_gpio();\n#endif/' arch/arm/mach-exynos/board-c1lgt-modems.c
-sed -i 's/	bnk_cfg = \&cbp_edpram_bank_cfg;/#if !defined(CONFIG_C1_LGT_EXPERIMENTAL)\n	bnk_cfg = \&cbp_edpram_bank_cfg;/' arch/arm/mach-exynos/board-c1lgt-modems.c
-sed -i 's/	sromc_config_access_timing(bnk_cfg->csn, tm_cfg);/@ @ @ @/' arch/arm/mach-exynos/board-c1lgt-modems.c
-sed -i '1,/@ @ @ @/s/@ @ @ @/	sromc_config_access_timing(bnk_cfg->csn, tm_cfg);/' arch/arm/mach-exynos/board-c1lgt-modems.c
-sed -i '1,/@ @ @ @/s/@ @ @ @/	sromc_config_access_timing(bnk_cfg->csn, tm_cfg);\n#endif/' arch/arm/mach-exynos/board-c1lgt-modems.c
-sed -i 's/	platform_device_register(\&cdma_modem);/#if !defined(CONFIG_C1_LGT_EXPERIMENTAL)\n	platform_device_register(\&cdma_modem);\n#endif/' arch/arm/mach-exynos/board-c1lgt-modems.c
-# Update camera kernel driver from Samsung sources, this should make camera app glitches less severe
+# Update camera kernel driver from Samsung sources, this should make camera app glitches less severe.
 cp $SDIR/camera/s5c73m3.c drivers/media/video/
 cp $SDIR/camera/s5c73m3.h drivers/media/video/
 cp $SDIR/camera/s5c73m3_spi.c drivers/media/video/
@@ -182,69 +173,69 @@ cd arch/arm/configs
 KCFG=lineageos_${C1MODEL}_defconfig
 # Kernel config for all c1 models
 cp lineageos_i9300_defconfig $KCFG
-sed -i 's/CONFIG_TARGET_LOCALE_EUR=y//' $KCFG
-sed -i 's/# CONFIG_TARGET_LOCALE_KOR is not set//' $KCFG
+sed -i '/CONFIG_TARGET_LOCALE_EUR=y/d' $KCFG
+sed -i '/# CONFIG_TARGET_LOCALE_KOR is not set/d' $KCFG
 echo CONFIG_TARGET_LOCALE_KOR=y>>$KCFG
-sed -i 's/CONFIG_MACH_M0=y//' $KCFG
-sed -i 's/# CONFIG_MACH_C1 is not set//' $KCFG
+sed -i '/CONFIG_MACH_M0=y/d' $KCFG
+sed -i '/# CONFIG_MACH_C1 is not set/d' $KCFG
 echo CONFIG_MACH_C1=y>>$KCFG
-sed -i 's/CONFIG_WLAN_REGION_CODE=100//' $KCFG
-sed -i 's/CONFIG_SEC_MODEM_M0=y//' $KCFG
-sed -i 's/# CONFIG_LTE_MODEM_CMC221 is not set//' $KCFG
+sed -i '/CONFIG_WLAN_REGION_CODE=100/d' $KCFG
+sed -i '/CONFIG_SEC_MODEM_M0=y/d' $KCFG
+sed -i '/# CONFIG_LTE_MODEM_CMC221 is not set/d' $KCFG
 echo CONFIG_LTE_MODEM_CMC221=y>>$KCFG
-sed -i 's/# CONFIG_LINK_DEVICE_DPRAM is not set//' $KCFG
+sed -i '/# CONFIG_LINK_DEVICE_DPRAM is not set/d' $KCFG
 echo CONFIG_LINK_DEVICE_DPRAM=y>>$KCFG
-sed -i 's/# CONFIG_LINK_DEVICE_USB is not set//' $KCFG
+sed -i '/# CONFIG_LINK_DEVICE_USB is not set/d' $KCFG
 echo CONFIG_LINK_DEVICE_USB=y>>$KCFG
-sed -i 's/# CONFIG_USBHUB_USB3503 is not set//' $KCFG
+sed -i '/# CONFIG_USBHUB_USB3503 is not set/d' $KCFG
 echo CONFIG_USBHUB_USB3503=y>>$KCFG
-sed -i 's/CONFIG_UMTS_MODEM_XMM6262=y//' $KCFG
-sed -i 's/CONFIG_LINK_DEVICE_HSIC=y//' $KCFG
-sed -i 's/# CONFIG_SIPC_VER_5 is not set//' $KCFG
+sed -i '/CONFIG_UMTS_MODEM_XMM6262=y/d' $KCFG
+sed -i '/CONFIG_LINK_DEVICE_HSIC=y/d' $KCFG
+sed -i '/# CONFIG_SIPC_VER_5 is not set/d' $KCFG
 echo CONFIG_SIPC_VER_5=y>>$KCFG
-sed -i 's/CONFIG_SND_DEBUG=y//' $KCFG
-sed -i 's/CONFIG_FM_RADIO=y//' $KCFG
-sed -i 's/CONFIG_FM_SI4705=y//' $KCFG
-sed -i 's/# CONFIG_TDMB is not set//' $KCFG
+sed -i '/CONFIG_SND_DEBUG=y/d' $KCFG
+sed -i '/CONFIG_FM_RADIO=y/d' $KCFG
+sed -i '/CONFIG_FM_SI4705=y/d' $KCFG
+sed -i '/# CONFIG_TDMB is not set/d' $KCFG
 echo CONFIG_TDMB=y>>$KCFG
 echo CONFIG_TDMB_VENDOR_RAONTECH=y>>$KCFG
 echo CONFIG_TDMB_MTV318=y>>$KCFG
 echo CONFIG_TDMB_SPI=y>>$KCFG
 # We need this one only if we want to reuse the kernel in TWRP
-sed -i 's/# CONFIG_RD_LZMA is not set//' $KCFG
+sed -i '/# CONFIG_RD_LZMA is not set/d' $KCFG
 echo CONFIG_RD_LZMA=y>>$KCFG
 # Fix video playback error, thanks to FullGreen
-sed -i 's/CONFIG_DMA_CMA=y//' $KCFG
+sed -i '/CONFIG_DMA_CMA=y/d' $KCFG
 sed -i '/CONFIG_CMA_SIZE_MBYTES/d' $KCFG
 sed -i '/CONFIG_CMA_SIZE_SEL_MBYTES/d' $KCFG
 sed -i '/CONFIG_CMA_ALIGNMENT/d' $KCFG
 sed -i '/CONFIG_CMA_AREAS/d' $KCFG
-sed -i 's/CONFIG_USE_FIMC_CMA=y//' $KCFG
-sed -i 's/CONFIG_USE_MFC_CMA=y//' $KCFG
+sed -i '/CONFIG_USE_FIMC_CMA=y/d' $KCFG
+sed -i '/CONFIG_USE_MFC_CMA=y/d' $KCFG
 # Model-specific kernel config
 if [ "$C1MODEL" = "c1lgt" ]; then
 echo CONFIG_MACH_C1_KOR_LGT=y>>$KCFG
 echo CONFIG_C1_LGT_EXPERIMENTAL=y>>$KCFG
-sed -i 's/# CONFIG_FM34_WE395 is not set//' $KCFG
+sed -i '/# CONFIG_FM34_WE395 is not set/d' $KCFG
 echo CONFIG_FM34_WE395=y>>$KCFG
 echo CONFIG_WLAN_REGION_CODE=203>>$KCFG
-sed -i 's/# CONFIG_SEC_MODEM_C1_LGT is not set//' $KCFG
+sed -i '/# CONFIG_SEC_MODEM_C1_LGT is not set/d' $KCFG
 echo CONFIG_SEC_MODEM_C1_LGT=y>>$KCFG
-sed -i 's/# CONFIG_CDMA_MODEM_CBP72 is not set//' $KCFG
+sed -i '/# CONFIG_CDMA_MODEM_CBP72 is not set/d' $KCFG
 echo CONFIG_CDMA_MODEM_CBP72=y>>$KCFG
-sed -i 's/# CONFIG_LTE_VIA_SWITCH is not set//' $KCFG
+sed -i '/# CONFIG_LTE_VIA_SWITCH is not set/d' $KCFG
 echo CONFIG_LTE_VIA_SWITCH=y>>$KCFG
 echo CONFIG_CMC_MODEM_HSIC_SYSREV=11>>$KCFG
 elif [ "$C1MODEL" = "c1skt" ]; then
 echo CONFIG_MACH_C1_KOR_SKT=y>>$KCFG
 echo CONFIG_WLAN_REGION_CODE=201>>$KCFG
-sed -i 's/# CONFIG_SEC_MODEM_C1 is not set//' $KCFG
+sed -i '/# CONFIG_SEC_MODEM_C1 is not set/d' $KCFG
 echo CONFIG_SEC_MODEM_C1=y>>$KCFG
 echo CONFIG_CMC_MODEM_HSIC_SYSREV=9>>$KCFG
 elif [ "$C1MODEL" = "c1ktt" ]; then
 echo CONFIG_MACH_C1_KOR_SKT=y>>$KCFG
 echo CONFIG_WLAN_REGION_CODE=202>>$KCFG
-sed -i 's/# CONFIG_SEC_MODEM_C1 is not set//' $KCFG
+sed -i '/# CONFIG_SEC_MODEM_C1 is not set/d' $KCFG
 echo CONFIG_SEC_MODEM_C1=y>>$KCFG
 echo CONFIG_CMC_MODEM_HSIC_SYSREV=9>>$KCFG
 fi

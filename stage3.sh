@@ -22,7 +22,7 @@ if grep -q Microsoft /proc/version; then
 # Patcj ijar to work with WSL, thanks to Reker
 patch --no-backup-if-mismatch -t -r - -N build/tools/ijar/zip.cc < $SDIR/wslbuild.diff
 # Use system bison just to build correct version of bison, then replace it with newly built one
-if [ ! -f out/host/linux-x86/bin/bison ]; then
+if [ ! -f out/host/linux-x86/bin/bison ] || [ ! -f out/host/linux-x86/lib64/libc++.so ]; then
 cp /usr/bin/bison prebuilts/misc/linux-x86/bison/
 make bison
 fi
