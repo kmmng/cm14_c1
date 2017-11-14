@@ -55,8 +55,8 @@ sed -i -e "s/mmcblk0p12/mmcblk0p13/" -e "s/mmcblk0p11/mmcblk0p12/" -e "s/mmcblk0
 #sed -i "s/\/dev\/cdma_rfs0                          u:object_r:radio_device:s0/\/dev\/cdma_rfs0                          u:object_r:radio_device:s0\n\/dev\/cdma_multipdp                      u:object_r:radio_device:s0/" selinux/file_contexts
 fi
 sed -i "s@export LD_SHIM_LIBS /system/lib/libsec-ril@export LD_SHIM_LIBS /system/lib/libril@" rootdir/init.target.rc
-sed -i '/    write \/data\/.cid.info 0/d' rootdir/init.target.rc
-sed -i "s/service cpboot-daemon \/system\/bin\/cbd -d/service cbd-lte \/system\/bin\/cbd -d -t cmc221 -b d -m d/" rootdir/init.target.rc
+sed -i 's@on post-fs-data@on post-fs-data\n    write /efs/.nv_state 0\n    chown radio radio /efs/.nv_state\n    chmod 0700 /efs/.nv_state\n@' rootdir/init.target.rc
+sed -i "s@service cpboot-daemon /system/bin/cbd -d@service cpboot-daemon /system/bin/cbd -d -t cmc221 -b d -m d@" rootdir/init.target.rc
 sed -i "s/i9300/$C1MODEL/g" selinux/file_contexts
 sed -i "s/i9300/$C1MODEL/g" Android.mk
 sed -i "s/xmm6262/cmc221/" BoardConfig.mk
@@ -152,8 +152,8 @@ sed -i 's/    RLOGD("RIL_register_socket completed");/    RLOGD("RIL_register_so
 sed -i 's/extern void RIL_onRequestAck(RIL_Token t);/#ifndef RIL_PRE_M_BLOBS\nextern void RIL_onRequestAck(RIL_Token t);\n#endif/' rild/rild.c
 sed -i 's/    RIL_onRequestAck/#ifndef RIL_PRE_M_BLOBS\n    RIL_onRequestAck\n#else\n    NULL\n#endif/' rild/rild.c
 croot
-# Patch rild.rc for c1
-echo "    onrestart restart cbd-lte" >> hardware/ril/rild/rild.rc
+## Patch rild.rc for c1
+## echo "    onrestart restart cbd-lte" >> hardware/ril/rild/rild.rc
 # Fix cellular data by making telephony provider use storage paths hardcoded in libsec-ril
 sed -i 's/defaultToDeviceProtectedStorage="true"/defaultToDeviceProtectedStorage="false"/' packages/providers/TelephonyProvider/AndroidManifest.xml
 # Patch samsung kernel for c1
