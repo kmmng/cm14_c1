@@ -1,4 +1,4 @@
-# LineageOS 14.1 for Samsung S3 Korean Models L / SHV-E210S / SHV-E210K
+# LineageOS 14.1 for Samsung S3 Korean Models SHV-E210L / SHV-E210S / SHV-E210K
 
 This build script will automatically build LineageOS 14.1 Android ROM for Samsung SHV-E210L / SHV-E210S / SHV-E210K.
 It is divided into 3 stages:
