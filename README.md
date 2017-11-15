@@ -14,3 +14,8 @@ export C1MODEL=c1lgt for SHV-E210L (the default).
 Building Android requires a lot of RAM - 16GB or more recommended, and a lot of free disk space - 250GB or more.
 Ubuntu, or another Debian-based linux is required to install all the required packages automatically.
 The script was tested and confirmed to work under normal Ubuntu 16.04 and under the new WSL-based Ubuntu from Windows Store. Only the new release of WSL that is available in Windows 10 Fall Creators Update can build Android. 
+
+If you don't want build this ROM by yourself, and just want to download a ready to use ROM, it is here:
+https://www.androidfilehost.com/?w=files&flid=146865
+XDA thread about this ROM is here:
+https://forum.xda-developers.com/galaxy-s3/general/rom-fullgreen-rom-e210l-everything-t3360600
