@@ -117,7 +117,7 @@ fi
 cd ramdisk/res/misc
 zip -q -d boeffla-config-reset-v4.zip META-INF/CERT.RSA META-INF/CERT.SF META-INF/MANIFEST.MF
 unzip -q boeffla-config-reset-v4.zip META-INF/com/google/android/updater-script
-sed -i 's/i9300\/n8000\/n801x/      $C1MODEL      /' META-INF/com/google/android/updater-script
+sed -i "s/i9300\/n8000\/n801x/      ${C1MODEL}      /" META-INF/com/google/android/updater-script
 if [ "$C1MODEL" = "c1lgt" ]; then
 sed -i -e 's/mmcblk0p12/mmcblk0p13/g' -e 's/mmcblk0p11/mmcblk0p12/g' -e 's/mmcblk0p10/mmcblk0p11/g' -e 's/mmcblk0p9/mmcblk0p10/g' -e 's/mmcblk0p8/mmcblk0p9/g' META-INF/com/google/android/updater-script
 fi
