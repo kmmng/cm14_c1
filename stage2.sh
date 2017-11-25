@@ -29,6 +29,7 @@ breakfast i9300
 echo No more errors should appear below this message.
 # Start converting i9300 sources to c1
 cd device/samsung
+rm -rf overlay ril proprietary-files.txt system.prop
 rm -rf $C1MODEL
 mv i9300 $C1MODEL
 cd $C1MODEL
@@ -54,6 +55,10 @@ sed -i -e "s/mmcblk0p12/mmcblk0p13/" -e "s/mmcblk0p11/mmcblk0p12/" -e "s/mmcblk0
 #sed -i "s/\/dev\/umts_rfs0                          u:object_r:radio_device:s0/\/dev\/umts_rfs0                          u:object_r:radio_device:s0\n\/dev\/cdma_rfs0                          u:object_r:radio_device:s0/" selinux/file_contexts
 #sed -i "s/\/dev\/cdma_rfs0                          u:object_r:radio_device:s0/\/dev\/cdma_rfs0                          u:object_r:radio_device:s0\n\/dev\/cdma_multipdp                      u:object_r:radio_device:s0/" selinux/file_contexts
 fi
+# For WIFI fix manual override
+echo '/data/wifi_override_murata              u:object_r:wifi_data_file:s0'>>selinux/file_contexts
+echo '/data/wifi_override_semco               u:object_r:wifi_data_file:s0'>>selinux/file_contexts
+echo '/data/wifi_override_semcosh             u:object_r:wifi_data_file:s0'>>selinux/file_contexts
 sed -i "s@export LD_SHIM_LIBS /system/lib/libsec-ril@export LD_SHIM_LIBS /system/lib/libril@" rootdir/init.target.rc
 sed -i 's@on post-fs-data@on post-fs-data\n    write /efs/.nv_state 0\n    chown radio radio /efs/.nv_state\n    chmod 0700 /efs/.nv_state\n@' rootdir/init.target.rc
 sed -i "s@service cpboot-daemon /system/bin/cbd -d@service cpboot-daemon /system/bin/cbd -d -t cmc221 -b d -m d@" rootdir/init.target.rc
@@ -140,8 +145,11 @@ git checkout -f
 # Configure samsung libril to be built like for i9300. It is needed for dependencies but won't be used anyway.
 sed -i "s/xmm6262 xmm6360/xmm6262 cmc221 xmm6360/g" ril/Android.mk
 sed -i "s/xmm6262 xmm6360/xmm6262 cmc221 xmm6360/g" ril/libril/Android.mk
-# Workaround for incomplete MAC address list of macloader
+# Workaround for incomplete MAC address list of macloader - WIFI fix
 sed -i 's/    int type = NONE;/#ifdef C1_WIFI_FIX\n    int type = MURATA;\n#else\n    int type = NONE;\n#endif/' macloader/macloader.c
+sed -i 's@    switch(type) {@#ifdef C1_WIFI_FIX\n    FILE* ofile = NULL;\n\n    ofile = fopen("/data/wifi_override_murata", "r");\n    if (ofile != 0) {\n    type = MURATA;\nM-O-R-E@' macloader/macloader.c
+sed -i 's@M-O-R-E@    fclose(ofile);\n    goto nxt; }\n    ofile = fopen("/data/wifi_override_semco", "r");\n    if (ofile != 0) {\n    type = SEMCO;\n    fclose(ofile);\n    goto nxt; }\nM-O-R-E@' macloader/macloader.c
+sed -i 's@M-O-R-E@    ofile = fopen("/data/wifi_override_semcosh", "r");\n    if (ofile != 0) {\n    type = SEMCOSH;\n    fclose(ofile); }\nnxt:\n#endif\n    switch(type) {@' macloader/macloader.c
 # Patch rild to load properitary libril, thanks to Haxynox
 cd ../ril
 git checkout -f
