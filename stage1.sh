@@ -19,6 +19,7 @@ cd $BDIR
 rm -rf hardware/samsung
 rm -rf build
 rm -rf prebuilts/misc
+rm -rf device/samsung/smdk4412-common
 repo init -u https://github.com/LineageOS/android.git -b cm-14.1
 repo sync --force-sync
 echo If there are fetch errors, please run the script again and it will continue downloading.
