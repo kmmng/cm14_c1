@@ -60,7 +60,7 @@ echo '/data/wifi_override_murata              u:object_r:wifi_data_file:s0'>>sel
 echo '/data/wifi_override_semco               u:object_r:wifi_data_file:s0'>>selinux/file_contexts
 echo '/data/wifi_override_semcosh             u:object_r:wifi_data_file:s0'>>selinux/file_contexts
 sed -i "s@export LD_SHIM_LIBS /system/lib/libsec-ril@export LD_SHIM_LIBS /system/lib/libril@" rootdir/init.target.rc
-sed -i 's@on post-fs-data@on post-fs-data\n    write /efs/.nv_state 0\n    chown radio radio /efs/.nv_state\n    chmod 0700 /efs/.nv_state\n@' rootdir/init.target.rc
+#sed -i 's@on post-fs-data@on post-fs-data\n    write /efs/.nv_state 0\n    chown radio radio /efs/.nv_state\n    chmod 0700 /efs/.nv_state\n@' rootdir/init.target.rc
 sed -i "s@service cpboot-daemon /system/bin/cbd -d@service cpboot-daemon /system/bin/cbd -d -t cmc221 -b d -m d@" rootdir/init.target.rc
 sed -i "s/i9300/$C1MODEL/g" selinux/file_contexts
 sed -i "s/i9300/$C1MODEL/g" Android.mk
@@ -109,6 +109,8 @@ echo lib/libril.so>>proprietary-files.txt
 echo lib/libfactoryutil.so>>proprietary-files.txt
 echo lib/hw/sensors.smdk4x12.so>>proprietary-files.txt
 #echo lib/libsecril-client.so>>proprietary-files.txt # Only for libsec-ril from 4.4.4
+# Blacklist CB to fix battery drain
+echo priv-app/CellBroadcastReceiver/CellBroadcastReceiver.apk>>proprietary-files.txt
 sed -i "s/i9300/$C1MODEL/g" system.prop
 # Patch config files to support LTE
 sed -i 's/>GPRS|EDGE|WCDMA</>GSM|WCDMA|LTE</' overlay/frameworks/base/core/res/res/values/config.xml
