@@ -16,7 +16,7 @@ chmod a+x ~/bin/repo
 export PATH="$HOME/bin:$PATH"
 echo Downloading Android sources, this will take a long time
 cd $BDIR
-rm -rf hardware/samsung
+rm -rf hardware
 rm -rf build
 rm -rf prebuilts/misc
 repo init -u https://github.com/LineageOS/android.git -b cm-14.1
