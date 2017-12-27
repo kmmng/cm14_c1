@@ -149,9 +149,10 @@ sed -i "s/xmm6262 xmm6360/xmm6262 cmc221 xmm6360/g" ril/Android.mk
 sed -i "s/xmm6262 xmm6360/xmm6262 cmc221 xmm6360/g" ril/libril/Android.mk
 # Workaround for incomplete MAC address list of macloader - WIFI fix
 sed -i 's/    int type = NONE;/#ifdef C1_WIFI_FIX\n    int type = MURATA;\n#else\n    int type = NONE;\n#endif/' macloader/macloader.c
-sed -i 's@    switch(type) {@#ifdef C1_WIFI_FIX\n    FILE* ofile = NULL;\n\n    ofile = fopen("/data/wifi_override_murata", "r");\n    if (ofile != 0) {\n    type = MURATA;\nM-O-R-E@' macloader/macloader.c
-sed -i 's@M-O-R-E@    fclose(ofile);\n    goto nxt; }\n    ofile = fopen("/data/wifi_override_semco", "r");\n    if (ofile != 0) {\n    type = SEMCO;\n    fclose(ofile);\n    goto nxt; }\nM-O-R-E@' macloader/macloader.c
-sed -i 's@M-O-R-E@    ofile = fopen("/data/wifi_override_semcosh", "r");\n    if (ofile != 0) {\n    type = SEMCOSH;\n    fclose(ofile); }\nnxt:\n#endif\n    switch(type) {@' macloader/macloader.c
+sed -i 's@    /\* open mac addr file \*/@#ifdef C1_WIFI_FIX\n    enum Type otype = NONE;\n    FILE* ofile = NULL;\n\n    ofile = fopen("/data/wifi_override_murata", "r");\n    if (ofile != 0) {\n    otype = MURATA;\nM-O-R-E@' macloader/macloader.c
+sed -i 's@M-O-R-E@    goto nxt; }\n    ofile = fopen("/data/wifi_override_semco", "r");\n    if (ofile != 0) {\n    otype = SEMCO;\n    goto nxt; }\nM-O-R-E@' macloader/macloader.c
+sed -i 's@M-O-R-E@    ofile = fopen("/data/wifi_override_semcosh", "r");\n    if (ofile != 0) {\n    otype = SEMCOSH;\n    goto nxt; }\n#endif\n\n    /* open mac addr file */@' macloader/macloader.c
+sed -i 's@    const char \*nvram_file;@#ifdef C1_WIFI_FIX\nnxt:\n    if (otype != NONE ) {\n    fclose(ofile);\n    remove(CID_PATH);\n    type = otype; }\n#endif\n\n    const char *nvram_file;@' macloader/macloader.c
 # Patch rild to load properitary libril, thanks to Haxynox
 cd ../ril
 git checkout -f
