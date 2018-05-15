@@ -47,7 +47,7 @@ sed -i "/<device name=\"sco-out\">/ { N; /    <path name=\"on\">/ s/    <path na
 sed -i "/    <path name=\"off\">/ { N; /        <ctl name=\"AIF2DAC2L Mixer AIF1.1 Switch\" val=\"0\"\/>/ s/    <path name=\"off\">/    <path name=\"off\">\n        <ctl name=\"FM Control\" val=\"4\"\/>/}" configs/tiny_hw.xml
 sed -i -e "s/mmcblk0p12/mmcblk0p13/" -e "s/mmcblk0p11/mmcblk0p12/" -e "s/mmcblk0p10/mmcblk0p11/" -e "s/mmcblk0p9/mmcblk0p10/" -e "s/mmcblk0p8/mmcblk0p9/" rootdir/fstab.smdk4x12
 sed -i -e "s/mmcblk0p12/mmcblk0p13/" -e "s/mmcblk0p11/mmcblk0p12/" -e "s/mmcblk0p10/mmcblk0p11/" -e "s/mmcblk0p9 /mmcblk0p10/"  -e "s/mmcblk0p8/mmcblk0p9/" selinux/file_contexts
-# Only if we use CDMA modem
+## Only if we use CDMA modem
 #sed -i "s/\/dev\/umts_boot0                         u:object_r:radio_device:s0/\/dev\/umts_boot0                         u:object_r:radio_device:s0\n\/dev\/cdma_boot0                         u:object_r:radio_device:s0/" selinux/file_contexts
 #sed -i "s/\/dev\/umts_boot1                         u:object_r:radio_device:s0/\/dev\/umts_boot1                         u:object_r:radio_device:s0\n\/dev\/cdma_boot1                         u:object_r:radio_device:s0/" selinux/file_contexts
 #sed -i "s/\/dev\/umts_ipc0                          u:object_r:radio_device:s0/\/dev\/umts_ipc0                          u:object_r:radio_device:s0\n\/dev\/cdma_ipc0                          u:object_r:radio_device:s0/" selinux/file_contexts
@@ -59,6 +59,7 @@ fi
 echo '/data/wifi_override_murata              u:object_r:wifi_data_file:s0'>>selinux/file_contexts
 echo '/data/wifi_override_semco               u:object_r:wifi_data_file:s0'>>selinux/file_contexts
 echo '/data/wifi_override_semcosh             u:object_r:wifi_data_file:s0'>>selinux/file_contexts
+# For c1 modem and RIL
 sed -i "s@export LD_SHIM_LIBS /system/lib/libsec-ril@export LD_SHIM_LIBS /system/lib/libril@" rootdir/init.target.rc
 #sed -i 's@on post-fs-data@on post-fs-data\n    write /efs/.nv_state 0\n    chown radio radio /efs/.nv_state\n    chmod 0700 /efs/.nv_state\n@' rootdir/init.target.rc
 sed -i "s@service cpboot-daemon /system/bin/cbd -d@service cpboot-daemon /system/bin/cbd -d -t cmc221 -b d -m d@" rootdir/init.target.rc
@@ -67,7 +68,7 @@ sed -i "s/i9300/$C1MODEL/g" Android.mk
 sed -i "s/xmm6262/cmc221/" BoardConfig.mk
 sed -i "s/i9300/$C1MODEL/g" BoardConfig.mk
 sed -i "s/GT-I9300/SHV-E210$C1VAR/g" BoardConfig.mk
-# Enlarge system partition
+# Match system partition size
 sed -i 's/# assert/# system partition size\nBOARD_SYSTEMIMAGE_PARTITION_SIZE := 2147483648\n\n# assert/' BoardConfig.mk
 sed -i "s/-DDISABLE_ASHMEM_TRACKING/-DDISABLE_ASHMEM_TRACKING -DRIL_PRE_M_BLOBS -DC1_WIFI_FIX/" BoardConfig.mk
 sed -i "s/i9300/$C1MODEL/g" lineage.mk
