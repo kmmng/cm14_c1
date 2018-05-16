@@ -29,11 +29,9 @@ fi
 cp out/host/linux-x86/bin/bison prebuilts/misc/linux-x86/bison/
 mkdir -p prebuilts/misc/linux-x86/lib64/
 cp out/host/linux-x86/lib64/libc++.so prebuilts/misc/linux-x86/lib64/
-else
-# We don't use ccache under WSL as it seems to cause problems
+fi
 export USE_CCACHE=1
 prebuilts/misc/linux-x86/ccache/ccache -M 50G
-fi
 source build/envsetup.sh
 # Compile
 export WITH_SU=true
