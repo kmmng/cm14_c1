@@ -37,16 +37,7 @@ git checkout -f
 # Patch device specific sources and config files
 sed -i "s/GT-I9300/SHV-E210$C1VAR/" bluetooth/bdroid_buildcfg.h
 if [ "$C1MODEL" = "c1lgt" ]; then
-sed -i "/<device name=\"speaker\">/ { N; /    <path name=\"on\">/ s/    <path name=\"on\">/    <path name=\"on\">\n        <ctl name=\"FM Control\" val=\"4\"\/>/}" configs/tiny_hw.xml
-sed -i "/    <path name=\"off\">/ { N; /        <ctl name=\"SPK Switch\" val=\"0\"\/>/ s/    <path name=\"off\">/    <path name=\"off\">\n        <ctl name=\"FM Control\" val=\"4\"\/>/}" configs/tiny_hw.xml
-sed -i "/<device name=\"earpiece\">/ { N; /    <path name=\"on\">/ s/    <path name=\"on\">/    <path name=\"on\">\n        <ctl name=\"FM Control\" val=\"4\"\/>/}" configs/tiny_hw.xml
-sed -i "/    <path name=\"off\">/ { N; /        <ctl name=\"RCV Switch\" val=\"0\"\/>/ s/    <path name=\"off\">/    <path name=\"off\">\n        <ctl name=\"FM Control\" val=\"4\"\/>/}" configs/tiny_hw.xml
-sed -i "/<device name=\"headphone\">/ { N; /    <path name=\"on\">/ s/    <path name=\"on\">/    <path name=\"on\">\n        <ctl name=\"FM Control\" val=\"4\"\/>/}" configs/tiny_hw.xml
-sed -i "/    <path name=\"off\">/ { N; /        <ctl name=\"HP Switch\" val=\"0\"\/>/ s/    <path name=\"off\">/    <path name=\"off\">\n        <ctl name=\"FM Control\" val=\"4\"\/>/}" configs/tiny_hw.xml
-sed -i "/<device name=\"sco-out\">/ { N; /    <path name=\"on\">/ s/    <path name=\"on\">/    <path name=\"on\">\n        <ctl name=\"FM Control\" val=\"4\"\/>/}" configs/tiny_hw.xml
-sed -i "/    <path name=\"off\">/ { N; /        <ctl name=\"AIF2DAC2L Mixer AIF1.1 Switch\" val=\"0\"\/>/ s/    <path name=\"off\">/    <path name=\"off\">\n        <ctl name=\"FM Control\" val=\"4\"\/>/}" configs/tiny_hw.xml
-sed -i -e "s/mmcblk0p12/mmcblk0p13/" -e "s/mmcblk0p11/mmcblk0p12/" -e "s/mmcblk0p10/mmcblk0p11/" -e "s/mmcblk0p9/mmcblk0p10/" -e "s/mmcblk0p8/mmcblk0p9/" rootdir/fstab.smdk4x12
-sed -i -e "s/mmcblk0p12/mmcblk0p13/" -e "s/mmcblk0p11/mmcblk0p12/" -e "s/mmcblk0p10/mmcblk0p11/" -e "s/mmcblk0p9 /mmcblk0p10/"  -e "s/mmcblk0p8/mmcblk0p9/" selinux/file_contexts
+sed -i 's/    <path name="on">/    <path name="on">\n        <ctl name="FM Control" val="4"\/>/' configs/tiny_hw.xml
 ## Only if we use CDMA modem
 #sed -i "s/\/dev\/umts_boot0                         u:object_r:radio_device:s0/\/dev\/umts_boot0                         u:object_r:radio_device:s0\n\/dev\/cdma_boot0                         u:object_r:radio_device:s0/" selinux/file_contexts
 #sed -i "s/\/dev\/umts_boot1                         u:object_r:radio_device:s0/\/dev\/umts_boot1                         u:object_r:radio_device:s0\n\/dev\/cdma_boot1                         u:object_r:radio_device:s0/" selinux/file_contexts
@@ -104,7 +95,7 @@ mv i9300.mk $C1MODEL.mk
 sed -i "s/i9300/$C1MODEL/g" $C1MODEL.mk
 sed -i "s/m0/$C1MODEL/g" $C1MODEL.mk
 # Patch RILJ
-patch --no-backup-if-mismatch -t -r - ril/telephony/java/com/android/internal/telephony/SamsungExynos4RIL.java < $SDIR/c1ril-cm.diff
+patch --no-backup-if-mismatch -t -r - ril/telephony/java/com/android/internal/telephony/SamsungExynos4RIL.java < $SDIR/patches/c1ril-cm.diff
 # Add more proprietary files
 echo lib/libomission_avoidance.so>>proprietary-files.txt
 echo lib/libril.so>>proprietary-files.txt
@@ -176,13 +167,13 @@ git checkout -f
 # Update modem drivers from Samsung sources and patch them
 rm -rf drivers/misc/modem_if_c1
 rm -rf include/linux/platform_data/modem_c1.h
-patch --no-backup-if-mismatch -t -r - -p1 < $SDIR/c1kernel-cm.diff
+patch --no-backup-if-mismatch -t -r - -p1 < $SDIR/patches/c1kernel-cm.diff
 # Update camera kernel driver from Samsung sources, this should make camera app glitches less severe.
-cp $SDIR/camera/s5c73m3.c drivers/media/video/
-cp $SDIR/camera/s5c73m3.h drivers/media/video/
-cp $SDIR/camera/s5c73m3_spi.c drivers/media/video/
-cp $SDIR/camera/s5c73m3_platform.h include/media/
-cp $SDIR/camera/midas-camera.c arch/arm/mach-exynos/
+cp $SDIR/drivers/camera/s5c73m3.c drivers/media/video/
+cp $SDIR/drivers/camera/s5c73m3.h drivers/media/video/
+cp $SDIR/drivers/camera/s5c73m3_spi.c drivers/media/video/
+cp $SDIR/drivers/camera/s5c73m3_platform.h include/media/
+cp $SDIR/drivers/camera/midas-camera.c arch/arm/mach-exynos/
 cd arch/arm/configs
 KCFG=lineageos_${C1MODEL}_defconfig
 # Kernel config for all c1 models
