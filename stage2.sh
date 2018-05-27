@@ -99,6 +99,7 @@ echo ro.ril.telephony.mqanelements=6>>system.prop
 #echo ro.ril.hsxpa=1>>system.prop
 #echo ro.ril.gprsclass=10>>system.prop
 sed -i "s/i9300/$C1MODEL/g" extract-files.sh
+sed -i "s/i9300/$C1MODEL/g" setup-makefiles.sh
 mv i9300.mk $C1MODEL.mk
 sed -i "s/i9300/$C1MODEL/g" $C1MODEL.mk
 sed -i "s/m0/$C1MODEL/g" $C1MODEL.mk
@@ -133,6 +134,7 @@ sed -i 's@$(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvi
 sed -i 's@M-O-R-E@else\n$(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)\nendif@' common.mk
 sed -i "s/i9300 i9305/i9300 c1lgt c1skt c1ktt i9305/g" Android.mk
 sed -i "s/i9300 i9305/i9300 c1lgt c1skt c1ktt i9305/g" extract-files.sh
+sed -i "s/i9300 i9305/i9300 c1lgt c1skt c1ktt i9305/g" setup-makefiles.sh
 sed -i "s/i9300 i9305/i9300 c1lgt c1skt c1ktt i9305/g" camera/Android.mk
 # Add more camera firmware variants, I don't sure it is needed but it should cause no harm
 echo vendor/firmware/SlimISP_BK.bin>>proprietary-files.txt
