@@ -31,6 +31,7 @@ mkdir -p prebuilts/misc/linux-x86/lib64/
 cp out/host/linux-x86/lib64/libc++.so prebuilts/misc/linux-x86/lib64/
 fi
 export USE_CCACHE=1
+export ANDROID_JACK_VM_ARGS="-Dfile.encoding=UTF-8 -XX:+TieredCompilation -Xmx4G"
 prebuilts/misc/linux-x86/ccache/ccache -M 50G
 source build/envsetup.sh
 # Compile
